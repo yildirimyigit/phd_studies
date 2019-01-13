@@ -185,7 +185,7 @@ class MyNN:
 
 
 if __name__ == "__main__":
-    neu = MyNN(nn_arch=(1, 10, 20, 10, 1), acts=[sigm, sigm, sigm, sigm, sigm])
+    neu = MyNN(nn_arch=(1, 16, 32, 16, 1), acts=[sigm, relu, sigm, tanh, sigm])
 
     # x = np.array([[0.3752], [-0.2676], [-0.4988], [0.2868], [-0.207], [-0.3173], [0.1603], [0.1371], [0.2306],
     #               [0.334], [-0.122], [-0.164], [-0.0729], [-0.1599], [-0.3263], [-0.4928], [0.1322], [-0.4274],
@@ -202,11 +202,11 @@ if __name__ == "__main__":
     y = 0.2 + 0.4*x**2 + 0.3*x*np.sin(15*x) + 0.05*np.cos(50*x)
 
     err = []
-    epochs = 100000
+    epochs = 500000
     err_trsh = 1e-5
-    lr = 0.3
+    lr = 0.001
     decay = 0.00000025
-    momentum = 0.25
+    momentum = 0.05
     for i in range(epochs):
         curr_err = neu.epoch(x, y, lr=lr, momentum=momentum)
         lr = np.maximum(lr - decay, 0.0001)
