@@ -3,12 +3,10 @@
   @author: irmak.guzey@boun.edu.tr
 """
 import numpy as np
-from utils import *
-from environment import *
 
 
 class MDP:
-    def __init__(self, path='../../data/'):
+    def __init__(self, path='data/'):
         self.path = path
         self.states, self.actions, self.transition = self.create_env()
         # self.th_arr, self.dh_arr, self.tg_arr, self.dg_arr = self.get_discritized_env_arrays()

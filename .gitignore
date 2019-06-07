@@ -107,3 +107,4 @@ venv.bak/
 # Yigit added
 # numpy data files
 .npy
+data/
