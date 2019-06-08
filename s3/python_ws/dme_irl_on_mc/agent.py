@@ -74,7 +74,7 @@ import sys
 class IRLAgent:
     def __init__(self):
         self.env = MDP()
-        self.rew_nn = MyNN(nn_arch=(4, 8, 8, 1), acts=[sigm, gaussian, tanh])  # initializes with random weights
+        self.rew_nn = MyNN(nn_arch=(2, 8, 8, 1), acts=[sigm, gaussian, tanh])  # initializes with random weights
         self.state_rewards = np.empty(len(self.env.states))
 
         self.state_id = self.env.start_id
@@ -163,4 +163,4 @@ class IRLAgent:
         return np.exp(self.q[sid][aid] - self.v[sid, -1])   # last column in the v matrix
 
     def reward(self, state):
-        return self.rew_nn.forward(np.asarray([state.dg, state.tg, state.dh, state.th]))
+        return self.rew_nn.forward(np.asarray([state.x, state.v]))
