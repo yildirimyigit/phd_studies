@@ -4,10 +4,11 @@
   [1]: Kitani 2012, Activity Forecasting
 """
 import numpy as np
-from env import MDP
+from env import IRLMDP
 from neural_network import MyNN, sigm, linear, tanh, gaussian
 
 import sys
+import seaborn as sb
 
 
 # class RLAgent:
@@ -73,13 +74,13 @@ import sys
 
 class IRLAgent:
     def __init__(self):
-        self.env = MDP()
+        self.env = IRLMDP()
         self.rew_nn = MyNN(nn_arch=(2, 8, 8, 1), acts=[sigm, gaussian, tanh])  # initializes with random weights
         self.state_rewards = np.empty(len(self.env.states))
 
         self.state_id = self.env.start_id
 
-        self.vi_loop = 100
+        self.vi_loop = 144
         self.v = np.empty((len(self.env.states), self.vi_loop), dtype=float)
         self.q = np.empty((len(self.env.states), len(self.env.actions)), dtype=float)
         self.esvc = np.empty(len(self.env.states), dtype=float)
@@ -93,8 +94,6 @@ class IRLAgent:
     def backward_pass(self):
         print("+ IRLAgent.backward_pass")
         self.v[:] = -sys.float_info.max
-        reward_vect = np.vectorize(self.reward)
-        self.state_rewards = reward_vect(self.env.states)
 
         for i in range(self.vi_loop-1):
             self.v[self.env.goal_id, i] = 0
@@ -134,14 +133,22 @@ class IRLAgent:
         self.esvc_mat[self.env.start_id, :] = 1
         for i in range(self.vi_loop-1):
             self.esvc_mat[self.env.goal_id][i] = 0
+            esvc_unnorm = np.zeros(len(self.env.states))
             for j in range(len(self.env.states)):
                 sumesvc = 0
                 for k in range(len(self.env.states)):
                     for l in range(len(self.env.actions)):  # indices: s:j, s':k, a:l
                         sumesvc += self.env.transition[k, l, j]*self.policy(k, l)*self.esvc_mat[k, i]
-                self.esvc_mat[j, i+1] = sumesvc
-
+                        esvc_unnorm[j] = sumesvc
+            # normalization to calculate the frequencies. 12 Decimals to speed up calculation
+            self.esvc_mat[:, i + 1] = np.around(esvc_unnorm/sum(esvc_unnorm), decimals=12)
             print('\rForward Pass: {}'.format((i+1)), end='')
+
+            hm = sb.heatmap(self.esvc_mat)
+            fig = hm.get_figure()
+            fig.savefig('/home/yigit/Desktop/prop/Figure'+str(i)+'.png')
+            fig.clf()
+
         self.esvc = np.sum(self.esvc_mat, axis=1)
         print("- IRLAgent.forward_pass")
 
