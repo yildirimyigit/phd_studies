@@ -7,8 +7,7 @@ import numpy as np
 from environment import Environment
 
 
-def generate_model():
-    env = Environment()
+def generate_model(env):
     env.initialize_environment()
 
     env.save_states('data/states.npy')
@@ -17,14 +16,25 @@ def generate_model():
 
 
 # Loads previously recorded demonstrations to create trajectories
-def generate_trajectories(path='data/'):
-    demonstrations = []
+# :param e Environment object
+def generate_trajectories(e, path='data/'):
+    trajectories = []
     for i in range(9):
-        demonstrations.append(np.load(path+'big_t'+str(i)+'.npy'))
-
-    # TODO compute states of trajectories and save them in trajectories.npy
+        demonstrations = np.load(path+'big_t'+str(i)+'.npy')
+        j = 0
+        for demonstration in demonstrations:
+            print('\rBig: {0}, Dem: {1} '.format(i, j), end='')
+            j += 1
+            trajectory = []
+            for state_action in demonstration:
+                s = e.state_list[e.find_closest_state(State(state_action[0][0], state_action[0][1]))]
+                trajectory.append([s.x, s.v])
+            trajectories.append(np.asarray(trajectory))
+        print('')
+    np.save(path+'trajectories.npy', np.asarray(trajectories))
 
 
 if __name__ == "__main__":
-    generate_model()
-    # generate_trajectories()
+    env = Environment()
+    generate_model(env)
+    generate_trajectories(env)
