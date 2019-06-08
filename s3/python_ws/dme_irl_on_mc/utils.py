@@ -12,7 +12,11 @@ class State(object):
         self.x = x
         self.v = v
 
+    # euler
+    def distance(self, s):
+        return ((s.x - self.x)**2 + (s.v - self.v)**2)**0.5
+
 
 class Action(object):
-    def __init__(self, v=0):
-        self.v = v
+    def __init__(self, f=0):
+        self.force = f
