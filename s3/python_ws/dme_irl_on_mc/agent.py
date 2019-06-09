@@ -9,6 +9,8 @@ from neural_network import MyNN, sigm, linear, tanh, gaussian
 
 import sys
 import seaborn as sb
+import os
+import time
 
 
 # class RLAgent:
@@ -80,7 +82,7 @@ class IRLAgent:
 
         self.state_id = self.env.start_id
 
-        self.vi_loop = 144
+        self.vi_loop = 100
         self.v = np.empty((len(self.env.states), self.vi_loop), dtype=float)
         self.q = np.empty((len(self.env.states), len(self.env.actions)), dtype=float)
         self.esvc = np.empty(len(self.env.states), dtype=float)
@@ -129,9 +131,18 @@ class IRLAgent:
     # [1]
     def forward_pass(self):  # esvc: expected state visitation count
         print("+ IRLAgent.forward_pass")
+
+        # #######################################################################
+        # create the directory to be used for plotting
+        # since forward will be called on multiple times, I use system time here
+        path = self.env.path + 'figures/forward_pass/' + str(int(time.time()))
+        os.makedirs(path)
+        # #######################################################################
+
         self.esvc_mat[:, 0] = 0
         self.esvc_mat[self.env.start_id, :] = 1
-        for i in range(self.vi_loop-1):
+        # for i in range(self.vi_loop-1):
+        for i in range(2):
             self.esvc_mat[self.env.goal_id][i] = 0
             esvc_unnorm = np.zeros(len(self.env.states))
             for j in range(len(self.env.states)):
@@ -143,11 +154,7 @@ class IRLAgent:
             # normalization to calculate the frequencies. 12 Decimals to speed up calculation
             self.esvc_mat[:, i + 1] = np.around(esvc_unnorm/sum(esvc_unnorm), decimals=12)
             print('\rForward Pass: {}'.format((i+1)), end='')
-
-            hm = sb.heatmap(self.esvc_mat)
-            fig = hm.get_figure()
-            fig.savefig('/home/yigit/Desktop/prop/Figure'+str(i)+'.png')
-            fig.clf()
+            self.plot(path, i)
 
         self.esvc = np.sum(self.esvc_mat, axis=1)
         print("- IRLAgent.forward_pass")
@@ -164,10 +171,20 @@ class IRLAgent:
         self.emp_fc = sum_all_feats/len(trajectories)
 
     def exp_fc(self):   # expected feature counts
-        return np.matmul(self.esvc.T, self.env.states)
+        state_values = []
+        for s in self.env.states:
+            state_values.append([s.x, s.v])
+
+        return np.matmul(self.esvc.T, state_values)
 
     def policy(self, sid, aid):
         return np.exp(self.q[sid][aid] - self.v[sid, -1])   # last column in the v matrix
 
     def reward(self, state):
         return self.rew_nn.forward(np.asarray([state.x, state.v]))
+
+    def plot(self, path, i):
+        hm = sb.heatmap(self.esvc_mat)
+        fig = hm.get_figure()
+        fig.savefig(path+'/Figure' + str(i) + '.png')
+        fig.clf()
