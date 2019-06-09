@@ -139,7 +139,7 @@ class IRLAgent:
         os.makedirs(path)
         # #######################################################################
 
-        self.esvc_mat[:, 0] = 0
+        self.esvc_mat[:] = 0
         self.esvc_mat[self.env.start_id, :] = 1
         # for i in range(10):
         for i in range(self.vi_loop-1):
@@ -157,7 +157,7 @@ class IRLAgent:
             self.plot(path, i)
 
         self.esvc = np.sum(self.esvc_mat, axis=1)
-        print("- IRLAgent.forward_pass")
+        print("\n- IRLAgent.forward_pass")
 
     ###############################################
 
