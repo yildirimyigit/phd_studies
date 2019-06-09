@@ -103,7 +103,24 @@ class MyNN:
         layer = x
         for i in range(self.nof_layers - 1):
             b = np.ones(layer.ndim)
-            layer = np.append(layer, b)  # TODO: no batch right now, OLD:augmenting biases to each instance in the batch
+            layer = np.append(layer, b)
+            layer = np.dot(layer, self.weights[i])
+
+            self.layer_inputs.append(layer)
+            layer = self.activations[i](layer)
+
+            self.layer_outputs.append(layer)
+
+        return layer
+
+    def forward_batch(self, x):   # assuming dimensionality match btw each x and (w0-1), where -1 represents bias node
+        self.layer_inputs = []
+        self.layer_outputs = []
+
+        layer = x
+        for i in range(self.nof_layers - 1):
+            b = np.ones((len(layer), 1))
+            layer = np.hstack((layer, b))
             layer = np.dot(layer, self.weights[i])
 
             self.layer_inputs.append(layer)
