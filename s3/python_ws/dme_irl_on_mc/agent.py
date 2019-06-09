@@ -141,8 +141,8 @@ class IRLAgent:
 
         self.esvc_mat[:, 0] = 0
         self.esvc_mat[self.env.start_id, :] = 1
-        for i in range(10):
-        # for i in range(self.vi_loop-1):
+        # for i in range(10):
+        for i in range(self.vi_loop-1):
             self.esvc_mat[self.env.goal_id][i] = 0
             esvc_unnorm = np.zeros(len(self.env.states))
             for j in range(len(self.env.states)):
