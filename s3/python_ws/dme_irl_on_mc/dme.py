@@ -14,24 +14,29 @@ class DME:
         self.irl_agent = IRLAgent()
         self.iter_count = 10000
 
-        self.losses = np.empty_like(self.iter_count)
+        self.losses = np.zeros((self.iter_count, len(self.irl_agent.emp_fc)))
+        self.euler_losses = np.zeros(self.iter_count)
 
     def run(self):
+        state_array = np.asarray(self.irl_agent.env.state_list)
+
         for i in range(self.iter_count):
             # calculate state rewards
-            reward_vect = np.vectorize(self.irl_agent.reward)
-            self.irl_agent.state_rewards = reward_vect(self.irl_agent.env.states)   # state rewards with current r guess
+            self.irl_agent.state_rewards = self.irl_agent.reward_batch()
 
             # solve mdp wrt current reward
             self.irl_agent.backward_pass()
             self.irl_agent.forward_pass()   # calculate irl.esvc to use it in calculation of irl.exp_fc
 
-            # calculate loss
+            # calculate loss and euler distance to [0,0, ..., 0] which we want loss to be
             loss = self.irl_agent.emp_fc - self.irl_agent.exp_fc()
-            self.irl_agent.rew_nn.backprop_diff(loss)
+            euler_loss = np.power(np.sum(np.power(loss, 2)), 0.5)
 
-            print(loss)
+            self.irl_agent.rew_nn.backprop_diff(euler_loss, state_array, self.irl_agent.state_rewards)
+
+            print(euler_loss)
             self.losses[i] = loss
+            self.euler_losses[i] = euler_loss
 
 
 if __name__ == "__main__":
