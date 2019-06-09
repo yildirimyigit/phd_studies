@@ -43,6 +43,7 @@ class IRLMDP:
         states = []
         for s in self.states:
             states.append([s.x, s.v])
+        return states
 
 # Given state is goal or not
 # def is_goal(state):
