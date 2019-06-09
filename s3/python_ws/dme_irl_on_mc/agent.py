@@ -141,8 +141,8 @@ class IRLAgent:
 
         self.esvc_mat[:, 0] = 0
         self.esvc_mat[self.env.start_id, :] = 1
+        for i in range(10):
         # for i in range(self.vi_loop-1):
-        for i in range(2):
             self.esvc_mat[self.env.goal_id][i] = 0
             esvc_unnorm = np.zeros(len(self.env.states))
             for j in range(len(self.env.states)):
@@ -151,8 +151,8 @@ class IRLAgent:
                     for l in range(len(self.env.actions)):  # indices: s:j, s':k, a:l
                         sumesvc += self.env.transition[k, l, j]*self.policy(k, l)*self.esvc_mat[k, i]
                         esvc_unnorm[j] = sumesvc
-            # normalization to calculate the frequencies. 12 Decimals to speed up calculation
-            self.esvc_mat[:, i + 1] = np.around(esvc_unnorm/sum(esvc_unnorm), decimals=12)
+
+            self.esvc_mat[:, i + 1] = esvc_unnorm/sum(esvc_unnorm)  # normalization to calculate the frequencies.
             print('\rForward Pass: {}'.format((i+1)), end='')
             self.plot(path, i)
 
@@ -182,6 +182,9 @@ class IRLAgent:
 
     def reward(self, state):
         return self.rew_nn.forward(np.asarray([state.x, state.v]))
+
+    def reward_batch(self):
+        return self.rew_nn.forward_batch(np.asarray(self.env.state_list))
 
     def plot(self, path, i):
         hm = sb.heatmap(self.esvc_mat)
