@@ -20,6 +20,9 @@ class DME:
     def run(self):
         state_array = np.asarray(self.irl_agent.env.state_list)
 
+        lr = 0.3
+        decay = 0.00003
+
         for i in range(self.iter_count):
             print('--- Iteration {0} ---'.format(i))
             # calculate state rewards
@@ -33,7 +36,8 @@ class DME:
             loss = self.irl_agent.emp_fc - self.irl_agent.exp_fc()
             euler_loss = np.power(np.sum(np.power(loss, 2)), 0.5)
 
-            self.irl_agent.rew_nn.backprop_diff(euler_loss, state_array, self.irl_agent.state_rewards)
+            lr = np.maximum(lr - decay, 0.0005)
+            self.irl_agent.rew_nn.backprop_diff(euler_loss, state_array, self.irl_agent.state_rewards, lr)
 
             print("Loss: "+str(euler_loss))
             self.losses[i] = loss
