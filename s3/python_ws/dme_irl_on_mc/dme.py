@@ -37,7 +37,7 @@ class DME:
             euler_loss = np.power(np.sum(np.power(loss, 2)), 0.5)
 
             lr = np.maximum(lr - decay, 0.0005)
-            self.irl_agent.rew_nn.backprop_diff(euler_loss, state_array, self.irl_agent.state_rewards, lr)
+            self.irl_agent.rew_nn.backprop_diff(euler_loss, state_array, self.irl_agent.state_rewards, lr, momentum=0.8)
 
             print("Loss: "+str(euler_loss))
             self.losses[i] = loss
