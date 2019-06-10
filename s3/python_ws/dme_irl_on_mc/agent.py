@@ -172,7 +172,7 @@ class IRLAgent:
     ###############################################
 
     def calculate_emp_fc(self):
-        trajectories = np.load(self.env.path + 'trajectories.npy', encoding='bytes')
+        trajectories = np.load(self.env.path + 'trajectories.npy', encoding='bytes', allow_pickle=True)
         sum_traj_feats = []
         for trajectory in trajectories:
             sum_traj_feats.append(np.sum(trajectory, axis=0))

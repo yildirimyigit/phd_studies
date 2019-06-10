@@ -18,8 +18,9 @@ class IRLMDP:
 
     # returns previously generated states and actions
     def create_env(self):
-        return np.load(self.path + 'states.npy'), np.load(self.path + 'actions.npy'), \
-               np.load(self.path + 'transitions.npy')
+        return np.load(self.path + 'states.npy', allow_pickle=True), \
+               np.load(self.path + 'actions.npy', allow_pickle=True), \
+               np.load(self.path + 'transitions.npy', allow_pickle=True)
 
     def find_closest_state(self, state):
         min_ind = -1
