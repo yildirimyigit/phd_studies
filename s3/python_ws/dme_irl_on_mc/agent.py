@@ -77,7 +77,7 @@ import time
 class IRLAgent:
     def __init__(self):
         self.env = IRLMDP()
-        self.rew_nn = MyNN(nn_arch=(2, 8, 8, 1), acts=[sigm, gaussian, tanh])  # initializes with random weights
+        self.rew_nn = MyNN(nn_arch=(2, 32, 32, 1), acts=[sigm, gaussian, linear])  # initializes with random weights
         self.state_rewards = np.empty(len(self.env.states))
 
         self.state_id = self.env.start_id
@@ -91,10 +91,17 @@ class IRLAgent:
         self.emp_fc = 0
         self.calculate_emp_fc()
 
+        # #######################################################################
+        # create the directory to be used for plotting for backward passes
+        # self.backward_plot_path = self.env.path + 'figures/backward_pass/' + str(int(time.time()))
+        # os.makedirs(self.backward_plot_path)
+        # #######################################################################
+
     ###############################################
     # [1]
     def backward_pass(self):
-        print("+ IRLAgent.backward_pass")
+        # print("+ IRLAgent.backward_pass")
+
         self.v[:] = -sys.float_info.max
 
         for i in range(self.vi_loop-1):
@@ -114,7 +121,9 @@ class IRLAgent:
             self.v[nonzero_ids, i+1] = max_q[nonzero_ids] / np.sum(q[nonzero_ids], axis=1)
 
             print('\rBackward Pass: {}'.format((i+1)), end='')
-        print("\n- IRLAgent.backward_pass")
+        print('')
+        # self.plot_policy()
+        # print("\n- IRLAgent.backward_pass")
 
     ###############################################
 
@@ -130,7 +139,7 @@ class IRLAgent:
     ###############################################
     # [1]
     def forward_pass(self):  # esvc: expected state visitation count
-        print("+ IRLAgent.forward_pass")
+        # print("+ IRLAgent.forward_pass")
 
         # #######################################################################
         # create the directory to be used for plotting
@@ -154,10 +163,11 @@ class IRLAgent:
 
             self.esvc_mat[:, i + 1] = esvc_unnorm/sum(esvc_unnorm)  # normalization to calculate the frequencies.
             print('\rForward Pass: {}'.format((i+1)), end='')
-            self.plot(path, i)
+            self.plot_esvc(path, i)
 
         self.esvc = np.sum(self.esvc_mat, axis=1)
-        print("\n- IRLAgent.forward_pass")
+        print('')
+        # print("\n- IRLAgent.forward_pass")
 
     ###############################################
 
@@ -186,8 +196,17 @@ class IRLAgent:
     def reward_batch(self):
         return self.rew_nn.forward_batch(np.asarray(self.env.state_list))
 
-    def plot(self, path, i):
+    def plot_esvc(self, path, i):
         hm = sb.heatmap(self.esvc_mat)
         fig = hm.get_figure()
         fig.savefig(path+'/Figure' + str(i) + '.png')
         fig.clf()
+
+    # def plot_policy(self):
+    #     data = np.zeros()
+    #     for a in range(len(self.env.actions)):
+    #         data = self.q[:, a] - self.v[:, -1]
+    #     hm = sb.heatmap(self.esvc_mat)
+    #     fig = hm.get_figure()
+    #     fig.savefig(self.backward_plot_path + str(int(time.time())) + '.png')
+    #     fig.clf()
