@@ -7,12 +7,12 @@ import numpy as np
 from environment import Environment
 
 
-def generate_model(env):
-    env.initialize_environment()
+def generate_model(e):
+    e.initialize_environment()
 
-    env.save_states('data/states.npy')
-    env.save_actions('data/actions.npy')
-    env.save_transitions('data/transitions.npy')
+    e.save_states('data/states.npy')
+    e.save_actions('data/actions.npy')
+    e.save_transitions('data/transitions.npy')
 
 
 # Loads previously recorded demonstrations to create trajectories
