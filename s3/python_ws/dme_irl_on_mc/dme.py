@@ -21,6 +21,7 @@ class DME:
         state_array = np.asarray(self.irl_agent.env.state_list)
 
         for i in range(self.iter_count):
+            print('--- Iteration {0} ---'.format(i))
             # calculate state rewards
             self.irl_agent.state_rewards = self.irl_agent.reward_batch()
 
@@ -34,7 +35,7 @@ class DME:
 
             self.irl_agent.rew_nn.backprop_diff(euler_loss, state_array, self.irl_agent.state_rewards)
 
-            print(euler_loss)
+            print("Loss: "+str(euler_loss))
             self.losses[i] = loss
             self.euler_losses[i] = euler_loss
 
