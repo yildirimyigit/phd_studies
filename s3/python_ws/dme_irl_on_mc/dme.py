@@ -8,6 +8,11 @@
 import numpy as np
 from agent import IRLAgent
 
+import seaborn as sb
+
+import os
+import time
+
 
 class DME:
     def __init__(self):
@@ -16,6 +21,12 @@ class DME:
 
         self.losses = np.zeros((self.iter_count, len(self.irl_agent.emp_fc)))
         self.euler_losses = np.zeros(self.iter_count)
+
+        # #######################################################################
+        # create the directory to be used for plotting for rewards
+        self.reward_path = self.irl_agent.env.path + 'figures/reward/' + str(int(time.time()))
+        os.makedirs(self.reward_path)
+        # #######################################################################
 
     def run(self):
         state_array = np.asarray(self.irl_agent.env.state_list)
@@ -27,6 +38,7 @@ class DME:
             print('--- Iteration {0} ---'.format(i))
             # calculate state rewards
             self.irl_agent.state_rewards = self.irl_agent.reward_batch()
+            self.plot_reward(i)
 
             # solve mdp wrt current reward
             self.irl_agent.backward_pass()
@@ -42,6 +54,15 @@ class DME:
             print("Loss: "+str(euler_loss))
             self.losses[i] = loss
             self.euler_losses[i] = euler_loss
+
+    def plot_reward(self, nof_iter):
+        dim = int(np.sqrt(len(self.irl_agent.env.state_list)))
+        data = np.reshape(self.irl_agent.state_rewards, (dim, dim))
+
+        hm = sb.heatmap(data)
+        fig = hm.get_figure()
+        fig.savefig(self.reward_path + '/' + str(nof_iter) + '.png')
+        fig.clf()
 
 
 if __name__ == "__main__":

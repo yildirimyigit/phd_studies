@@ -80,7 +80,7 @@ class IRLAgent:
         self.rew_nn = MyNN(nn_arch=(2, 32, 32, 1), acts=[sigm, gaussian, linear])  # initializes with random weights
         self.state_rewards = np.empty(len(self.env.states))
 
-        self.state_id = self.env.start_id
+        # self.state_id = self.env.start_id
 
         self.vi_loop = 100
         self.v = np.empty((len(self.env.states), self.vi_loop), dtype=float)
@@ -90,12 +90,6 @@ class IRLAgent:
 
         self.emp_fc = 0
         self.calculate_emp_fc()
-
-        # #######################################################################
-        # create the directory to be used for plotting for backward passes
-        # self.backward_plot_path = self.env.path + 'figures/backward_pass/' + str(int(time.time()))
-        # os.makedirs(self.backward_plot_path)
-        # #######################################################################
 
     ###############################################
     # [1]
@@ -161,11 +155,12 @@ class IRLAgent:
                         sumesvc += self.env.transition[k, l, j]*self.policy(k, l)*self.esvc_mat[k, i]
                         esvc_unnorm[j] = sumesvc
 
-            self.esvc_mat[:, i + 1] = esvc_unnorm/sum(esvc_unnorm)  # normalization to calculate the frequencies.
+            # normalization to calculate the frequencies. Rounding to avoid rumtime error: invalud value
+            self.esvc_mat[:, i + 1] = np.around(esvc_unnorm/sum(esvc_unnorm), decimals=15)
             print('\rForward Pass: {}'.format((i+1)), end='')
-            self.plot_esvc(path, i)
-
+            self.plot_esvc_mat(path, i)
         self.esvc = np.sum(self.esvc_mat, axis=1)
+        self.plot_esvc(path, 'esvc', self.esvc)
         print('')
         # print("\n- IRLAgent.forward_pass")
 
@@ -179,6 +174,7 @@ class IRLAgent:
 
         sum_all_feats = np.sum(sum_traj_feats, axis=0)
         self.emp_fc = sum_all_feats/len(trajectories)
+        self.plot_esvc('data/figures/forward_pass', 'empfc', self.emp_fc)
 
     def exp_fc(self):   # expected feature counts
         state_values = []
@@ -196,17 +192,15 @@ class IRLAgent:
     def reward_batch(self):
         return self.rew_nn.forward_batch(np.asarray(self.env.state_list))
 
-    def plot_esvc(self, path, i):
+    def plot_esvc(self, path, name, data):
+        dim = int(np.sqrt(len(self.env.state_list)))
+        hm = sb.heatmap(np.reshape(data, (dim, dim)))
+        fig = hm.get_figure()
+        fig.savefig(path+'/' + name + '.png')
+        fig.clf()
+
+    def plot_esvc_mat(self, path, i):
         hm = sb.heatmap(self.esvc_mat)
         fig = hm.get_figure()
         fig.savefig(path+'/Figure' + str(i) + '.png')
         fig.clf()
-
-    # def plot_policy(self):
-    #     data = np.zeros()
-    #     for a in range(len(self.env.actions)):
-    #         data = self.q[:, a] - self.v[:, -1]
-    #     hm = sb.heatmap(self.esvc_mat)
-    #     fig = hm.get_figure()
-    #     fig.savefig(self.backward_plot_path + str(int(time.time())) + '.png')
-    #     fig.clf()
