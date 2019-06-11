@@ -174,7 +174,7 @@ class IRLAgent:
 
         sum_all_feats = np.sum(sum_traj_feats, axis=0)
         self.emp_fc = sum_all_feats/len(trajectories)
-        self.plot_esvc('data/figures/forward_pass', 'empfc', self.emp_fc)
+        # self.plot_esvc('data/figures/forward_pass', 'empfc', self.emp_fc)
 
     def exp_fc(self):   # expected feature counts
         state_values = []
