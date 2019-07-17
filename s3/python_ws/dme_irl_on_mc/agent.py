@@ -5,7 +5,7 @@
 """
 import numpy as np
 from env import IRLMDP
-from neural_network import MyNN, sigm, linear, tanh, gaussian
+from neural_network import MyNN, sigm, linear, tanh, gaussian, relu
 
 import sys
 import seaborn as sb
@@ -77,7 +77,7 @@ import time
 class IRLAgent:
     def __init__(self):
         self.env = IRLMDP()
-        self.rew_nn = MyNN(nn_arch=(2, 32, 32, 1), acts=[sigm, gaussian, linear])  # initializes with random weights
+        self.rew_nn = MyNN(nn_arch=(2, 16, 16, 1), acts=[gaussian, gaussian, gaussian])  # initializes with random weights
         self.state_rewards = np.empty(len(self.env.states))
 
         # self.state_id = self.env.start_id
@@ -155,7 +155,7 @@ class IRLAgent:
                         sumesvc += self.env.transition[k, l, j]*self.policy(k, l)*self.esvc_mat[k, i]
                         esvc_unnorm[j] = sumesvc
 
-            # normalization to calculate the frequencies. Rounding to avoid rumtime error: invalud value
+            # normalization to calculate the frequencies. Rounding just because.
             self.esvc_mat[:, i + 1] = np.around(esvc_unnorm/sum(esvc_unnorm), decimals=15)
             print('\rForward Pass: {}'.format((i+1)), end='')
             self.plot_esvc_mat(path, i)
