@@ -59,6 +59,7 @@ class Objectworld:
         self.nof_colors = nof_colors
 
         self.states = self.actions = self.transition = np.empty()
+        self.state_list = []
 
         self.create_env()
         self.start_id = self.get_start_state()
@@ -69,6 +70,17 @@ class Objectworld:
         state_list = []
         action_list = []
         transition_matrix = []
+
+        for i in range(self.dim):
+            for j in range(self.dim):
+                state_list.append(ObjectworldState(i, j))
+                self.state_list.append([i, j])
+
+        action_list.append(ObjectworldAction(0, -1))
+        action_list.append(ObjectworldAction(1, 0))
+        action_list.append(ObjectworldAction(0, 1))
+        action_list.append(ObjectworldAction(0, -1))
+        action_list.append(ObjectworldAction(0, 0))
 
 
 
