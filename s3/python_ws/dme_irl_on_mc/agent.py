@@ -77,7 +77,7 @@ import time
 class IRLAgent:
     def __init__(self):
         self.env = IRLMDP()
-        self.rew_nn = MyNN(nn_arch=(2, 16, 16, 1), acts=[gaussian, gaussian, gaussian])  # initializes with random weights
+        self.rew_nn = MyNN(nn_arch=(2, 256, 128, 1), acts=[gaussian, gaussian, linear])  # initializes with random weights
         self.state_rewards = np.empty(len(self.env.states))
 
         # self.state_id = self.env.start_id

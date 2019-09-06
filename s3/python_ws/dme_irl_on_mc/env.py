@@ -52,11 +52,10 @@ class IRLMDP:
 
 
 class Objectworld:
-    def __init__(self, dim=8, stochasticity=0.0, nof_colors=10):  # TODO: stochasticity is 0.3 by definition
+    def __init__(self, dim=32, stochasticity=0.0, nof_colors=2):  # TODO: stochasticity is 0.3 by definition
         self.dim = dim
         self.stochasticity = stochasticity
         self.nof_actions = 5    # by definition
-        self.gamma = 0.9
         self.nof_colors = nof_colors
 
         self.states = self.actions = self.transition = np.empty()
@@ -94,7 +93,7 @@ class Objectworld:
         new_state_probs = np.zeros(len(self.state_list))
 
         prob_action_realization = 1 - self.stochasticity
-        prob_other_action_realization = self.stochasticity / len(self.action_list)
+        prob_other_action_realization = self.stochasticity / (len(self.action_list) - 1)
 
         new_state = [np.clip(state[0] + action.xch, 0, self.dim), np.clip(state[1] + action.ych, 0, self.dim)]
         new_state_probs[new_state[0] * self.dim + new_state[1]] += prob_action_realization  # put prob to intended state
