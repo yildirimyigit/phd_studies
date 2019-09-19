@@ -39,16 +39,17 @@ class DME:
             # calculate state rewards
             self.irl_agent.state_rewards = self.irl_agent.reward_batch()
 
-            print('***Rewards')
-            print(self.irl_agent.state_rewards)
-            print('***Rewards')
+            # print('***Rewards')
+            # print(self.irl_agent.state_rewards)
+            # print('***Rewards')
 
             self.plot_reward(i)
 
             # solve mdp wrt current reward
             self.irl_agent.backward_pass()
             self.irl_agent.set_current_policy()
-            self.irl_agent.forward_pass()   # calculate irl.esvc to use it in calculation of irl.exp_fc
+            # self.irl_agent.forward_pass()   # calculate irl.esvc to use it in calculation of irl.exp_fc
+            self.irl_agent.fast_forward_pass()   # calculate irl.esvc to use it in calculation of irl.exp_fc
 
             # calculate loss and euler distance to [0,0, ..., 0] which we want loss to be
             loss = self.irl_agent.emp_fc - self.irl_agent.exp_fc()
