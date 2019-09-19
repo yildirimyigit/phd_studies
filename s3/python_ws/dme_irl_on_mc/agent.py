@@ -77,7 +77,8 @@ import time
 class IRLAgent:
     def __init__(self):
         self.env = IRLMDP()
-        self.rew_nn = MyNN(nn_arch=(2, 256, 128, 1), acts=[gaussian, gaussian, linear])  # initializes with random weights
+        # initializes nn with random weights
+        self.rew_nn = MyNN(nn_arch=(2, 256, 128, 1), acts=[gaussian, gaussian, linear])
         self.state_rewards = np.empty(len(self.env.states))
 
         # self.state_id = self.env.start_id
@@ -85,6 +86,7 @@ class IRLAgent:
         self.vi_loop = 100
         self.v = np.empty((len(self.env.states), self.vi_loop), dtype=float)
         self.q = np.empty((len(self.env.states), len(self.env.actions)), dtype=float)
+        self.current_policy = np.empty((len(self.env.states), len(self.env.actions)), dtype=float)
         self.esvc = np.empty(len(self.env.states), dtype=float)
         self.esvc_mat = np.empty((len(self.env.states), self.vi_loop), dtype=float)
 
@@ -138,31 +140,79 @@ class IRLAgent:
         # #######################################################################
         # create the directory to be used for plotting
         # since forward will be called on multiple times, I use system time here
-        path = self.env.path + 'figures/forward_pass/' + str(int(time.time()))
-        os.makedirs(path)
+        # path = self.env.path + 'figures/forward_pass/' + str(int(time.time()))
+        # os.makedirs(path)
+        # #######################################################################
+
+        self.esvc_mat[:] = 0
+        self.esvc_mat[self.env.start_id, :] = 1
+        # for loop_ctr in range(10):
+        for loop_ctr in range(self.vi_loop-1):
+            self.esvc_mat[self.env.goal_id][loop_ctr] = 0
+            esvc_unnorm = np.zeros(len(self.env.states))
+            for j in range(len(self.env.states)):
+                esvc_unnorm[j] = self.calc_esvc_unnorm(j, loop_ctr)
+
+            # normalization to calculate the frequencies. Rounding just because.
+            self.esvc_mat[:, loop_ctr + 1] = esvc_unnorm/sum(esvc_unnorm)
+            print('\rForward Pass: {}'.format((loop_ctr+1)), end='')
+        #     self.plot_esvc_mat(path, loop_ctr)
+        # self.esvc = np.sum(self.esvc_mat, axis=1)
+        # self.plot_esvc(path, 'esvc', self.esvc)
+        print('')
+        # print("\n- IRLAgent.forward_pass")
+
+    ###############################################
+
+    ###############################################
+    # [1]
+    def fast_forward_pass(self):  # esvc: expected state visitation count
+        # print("+ IRLAgent.forward_pass")
+
+        # #######################################################################
+        # create the directory to be used for plotting
+        # since forward will be called on multiple times, I use system time here
+        # path = self.env.path + 'figures/forward_pass/' + str(int(time.time()))
+        # os.makedirs(path)
         # #######################################################################
 
         self.esvc_mat[:] = 0
         self.esvc_mat[self.env.start_id, :] = 1
         # for i in range(10):
-        for i in range(self.vi_loop-1):
-            self.esvc_mat[self.env.goal_id][i] = 0
-            esvc_unnorm = np.zeros(len(self.env.states))
-            for j in range(len(self.env.states)):
-                sumesvc = 0
-                for k in range(len(self.env.states)):
-                    for l in range(len(self.env.actions)):  # indices: s:j, s':k, a:l
-                        sumesvc += self.env.transition[k, l, j]*self.policy(k, l)*self.esvc_mat[k, i]
-                        esvc_unnorm[j] = sumesvc
+        for loop_ctr in range(self.vi_loop-1):  # type: int
+            self.esvc_mat[self.env.goal_id][loop_ctr] = 0
+            esvc_unnorm = self.fast_calc_esvc_unnorm(loop_ctr)
 
             # normalization to calculate the frequencies. Rounding just because.
-            self.esvc_mat[:, i + 1] = np.around(esvc_unnorm/sum(esvc_unnorm), decimals=15)
-            print('\rForward Pass: {}'.format((i+1)), end='')
-            self.plot_esvc_mat(path, i)
-        self.esvc = np.sum(self.esvc_mat, axis=1)
-        self.plot_esvc(path, 'esvc', self.esvc)
+            self.esvc_mat[:, loop_ctr + 1] = esvc_unnorm/sum(esvc_unnorm)
+            print('\rForward Pass: {}'.format((loop_ctr+1)), end='')
+        #     self.plot_esvc_mat(path, loop_ctr)
+        # self.esvc = np.sum(self.esvc_mat, axis=1)
+        # self.plot_esvc(path, 'esvc', self.esvc)
         print('')
         # print("\n- IRLAgent.forward_pass")
+
+    ###############################################
+
+    # calculation of the unnormalized esvc for state 'index'
+    def calc_esvc_unnorm(self, index, loop_ctr):
+        sum_esvc = 0
+        for i in range(self.env.states):
+            for j in range(self.env.actions):
+                sum_esvc += self.env.transition(i, j, index) * self.policy(i, j) * self.esvc_mat[i, loop_ctr]
+        return sum_esvc
+
+    ###############################################
+
+    # calculation of the unnormalized esvc for state 'index'
+    def fast_calc_esvc_unnorm(self, loop_ctr):
+        esvc = np.zeros((len(self.env.states), len(self.env.states)))
+
+        for i in range(len(self.env.states)):
+            esvc[:, i] = np.matmul(self.env.transition[i][:][:].T, self.current_policy[i][:].T) \
+                         * self.esvc_mat[i][loop_ctr]
+
+        return np.sum(esvc, axis=1)
 
     ###############################################
 
@@ -185,6 +235,9 @@ class IRLAgent:
 
     def policy(self, sid, aid):
         return np.exp(self.q[sid][aid] - self.v[sid, -1])   # last column in the v matrix
+
+    def set_current_policy(self):
+        self.current_policy = np.exp(self.q - self.v[:, -1])   # last column in the v matrix
 
     def reward(self, state):
         return self.rew_nn.forward(np.asarray([state.x, state.v]))
