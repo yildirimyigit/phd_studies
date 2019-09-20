@@ -172,8 +172,8 @@ class IRLAgent:
         # #######################################################################
         # create the directory to be used for plotting
         # since forward will be called on multiple times, I use system time here
-        path = self.env.path + 'figures/forward_pass/' + str(int(time.time()))
-        os.makedirs(path)
+        # path = self.env.path + 'figures/forward_pass/' + str(int(time.time()))
+        # os.makedirs(path)
         # #######################################################################
 
         self.esvc_mat[:] = 0
@@ -183,14 +183,14 @@ class IRLAgent:
             self.esvc_mat[self.env.goal_id][loop_ctr] = 0
             esvc_unnorm = self.fast_calc_esvc_unnorm(loop_ctr)
 
-            # normalization to calculate the frequencies. Rounding just because.
+            # normalization to calculate the frequencies.
             self.esvc_mat[:, loop_ctr + 1] = esvc_unnorm/sum(esvc_unnorm)
-            print('\rForward Pass: {}'.format((loop_ctr+1)), end='')
-            self.plot_esvc_mat(path, loop_ctr)
+            # print('\rForward Pass: {}'.format((loop_ctr+1)), end='')
+            # self.plot_esvc_mat(path, loop_ctr)
         self.esvc = np.sum(self.esvc_mat, axis=1)
-        self.plot_esvc(path, 'esvc', self.esvc)
-        print('')
-        print("\n- IRLAgent.forward_pass")
+        # self.plot_esvc(path, 'esvc', self.esvc)
+        # print('')
+        # print("\n- IRLAgent.forward_pass")
 
     ###############################################
 
