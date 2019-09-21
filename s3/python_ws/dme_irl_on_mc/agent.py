@@ -78,12 +78,12 @@ class IRLAgent:
     def __init__(self):
         self.env = IRLMDP()
         # initializes nn with random weights
-        self.rew_nn = MyNN(nn_arch=(2, 256, 128, 1), acts=[gaussian, gaussian, linear])
+        self.rew_nn = MyNN(nn_arch=(2, 300, 400, 1), acts=[sigm, gaussian, linear])
         self.state_rewards = np.empty(len(self.env.states))
 
         # self.state_id = self.env.start_id
 
-        self.vi_loop = 100
+        self.vi_loop = 1000
         self.v = np.empty((len(self.env.states), self.vi_loop), dtype=float)
         self.q = np.empty((len(self.env.states), len(self.env.actions)), dtype=float)
         self.current_policy = np.empty((len(self.env.states), len(self.env.actions)), dtype=float)
@@ -109,6 +109,34 @@ class IRLAgent:
                 state_reward = self.state_rewards[s]
                 for a in range(len(self.env.actions)):
                     self.q[s][a] = state_reward + np.matmul(self.env.transition[s][a], self.v[:, i])
+
+            # v  = softmax_a Q
+            q = np.exp(self.q)
+            max_q = np.max(q, axis=1)   # max of each row: max q value over actions for each state
+            nonzero_ids = np.where(max_q != 0)
+            self.v[nonzero_ids, i+1] = max_q[nonzero_ids] / np.sum(q[nonzero_ids], axis=1)
+
+            print('\rBackward Pass: {}'.format((i+1)), end='')
+        print('')
+        # self.plot_policy()
+        # print("\n- IRLAgent.backward_pass")
+
+    ###############################################
+    # [1]
+    def fast_backward_pass(self):
+        # print("+ IRLAgent.backward_pass")
+
+        v = -sys.float_info.max * np.ones((self.env.states, 1))
+
+        for i in range(self.vi_loop-1):
+            v[self.env.goal_id] = 0
+
+            for s in range(len(self.env.states)):
+                if s == self.env.goal_id:
+                    continue
+                state_reward = self.state_rewards[s]
+                for a in range(len(self.env.actions)):
+                    self.q[s][a] = state_reward + np.matmul(self.env.transition[s][a], v)
 
             # v  = softmax_a Q
             q = np.exp(self.q)
@@ -185,7 +213,7 @@ class IRLAgent:
 
             # normalization to calculate the frequencies.
             self.esvc_mat[:, loop_ctr + 1] = esvc_unnorm/sum(esvc_unnorm)
-            # print('\rForward Pass: {}'.format((loop_ctr+1)), end='')
+            print('\rForward Pass: {}'.format((loop_ctr+1)), end='')
             # self.plot_esvc_mat(path, loop_ctr)
         self.esvc = np.sum(self.esvc_mat, axis=1)
         # self.plot_esvc(path, 'esvc', self.esvc)
