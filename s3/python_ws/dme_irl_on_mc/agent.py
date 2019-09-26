@@ -5,7 +5,7 @@
 """
 import numpy as np
 from env import IRLMDP
-from neural_network import MyNN, sigm, linear, tanh, gaussian, relu
+from neural_network import MyNN, sigm, linear, tanh, gaussian, relu, elu
 
 import sys
 import seaborn as sb
@@ -78,15 +78,16 @@ class IRLAgent:
     def __init__(self):
         self.env = IRLMDP()
         # initializes nn with random weights
-        self.rew_nn = MyNN(nn_arch=(2, 300, 400, 1), acts=[sigm, gaussian, linear])
+        self.rew_nn = MyNN(nn_arch=(2, 400, 300, 1), acts=[sigm, sigm, linear])
         self.state_rewards = np.empty(len(self.env.states))
 
         # self.state_id = self.env.start_id
 
-        self.vi_loop = 1000
+        self.vi_loop = 2500
         self.v = np.empty((len(self.env.states), self.vi_loop), dtype=float)
         self.q = np.empty((len(self.env.states), len(self.env.actions)), dtype=float)
         self.current_policy = np.empty((len(self.env.states), len(self.env.actions)), dtype=float)
+        self.fast_policy = np.empty((len(self.env.states), len(self.env.actions)), dtype=float)
         self.esvc = np.empty(len(self.env.states), dtype=float)
         self.esvc_mat = np.empty((len(self.env.states), self.vi_loop), dtype=float)
 
@@ -118,34 +119,39 @@ class IRLAgent:
 
             print('\rBackward Pass: {}'.format((i+1)), end='')
         print('')
+
         # self.plot_policy()
         # print("\n- IRLAgent.backward_pass")
 
     ###############################################
-    # [1]
+    # [1]: Calculates fast_policy using an approximate version of Value Iteration
     def fast_backward_pass(self):
         # print("+ IRLAgent.backward_pass")
 
-        v = -sys.float_info.max * np.ones((self.env.states, 1))
+        v = np.ones((len(self.env.states), 1)) * -sys.float_info.max
+        q = np.zeros((len(self.env.states), len(self.env.actions)))
 
         for i in range(self.vi_loop-1):
             v[self.env.goal_id] = 0
-
             for s in range(len(self.env.states)):
-                if s == self.env.goal_id:
-                    continue
-                state_reward = self.state_rewards[s]
-                for a in range(len(self.env.actions)):
-                    self.q[s][a] = state_reward + np.matmul(self.env.transition[s][a], v)
+                q[s, :] = np.matmul(self.env.transition[s, :, :], v).T + self.state_rewards[s]
 
-            # v  = softmax_a Q
-            q = np.exp(self.q)
-            max_q = np.max(q, axis=1)   # max of each row: max q value over actions for each state
-            nonzero_ids = np.where(max_q != 0)
-            self.v[nonzero_ids, i+1] = max_q[nonzero_ids] / np.sum(q[nonzero_ids], axis=1)
+            # v = softmax_a q
+            # one problem:
+            # when np.sum(np.exp(q), axis=1) = 0, division by 0. In this case v = 0
+            expq = np.exp(q)
+            sumexpq = np.sum(expq, axis=1)
+            nonzero_ids = np.where(sumexpq != 0)
+            zero_ids = np.where(sumexpq == 0)
+            v[nonzero_ids, 0] = np.exp(np.max(q[nonzero_ids], axis=1))/np.sum(expq[nonzero_ids], axis=1)
+            v[zero_ids, 0] = -sys.float_info.max
 
             print('\rBackward Pass: {}'.format((i+1)), end='')
-        print('')
+
+        v[self.env.goal_id] = 0
+        # current MaxEnt policy:
+        self.fast_policy = np.exp(q - np.reshape(v, (len(self.env.states), 1)))
+
         # self.plot_policy()
         # print("\n- IRLAgent.backward_pass")
 
@@ -237,7 +243,7 @@ class IRLAgent:
         esvc = np.zeros((len(self.env.states), len(self.env.states)))
 
         for i in range(len(self.env.states)):
-            esvc[:, i] = np.matmul(self.env.transition[i][:][:].T, self.current_policy[i][:].T) \
+            esvc[:, i] = np.matmul(self.env.transition[i][:][:].T, self.fast_policy[i][:].T) \
                          * self.esvc_mat[i][loop_ctr]
 
         return np.sum(esvc, axis=1)
@@ -255,11 +261,7 @@ class IRLAgent:
         # self.plot_esvc('data/figures/forward_pass', 'empfc', self.emp_fc)
 
     def exp_fc(self):   # expected feature counts
-        state_values = []
-        for s in self.env.states:
-            state_values.append([s.x, s.v])
-
-        return np.matmul(self.esvc.T, state_values)
+        return np.matmul(self.esvc.T, self.env.state_list)
 
     def policy(self, sid, aid):
         return np.exp(self.q[sid][aid] - self.v[sid, -1])   # last column in the v matrix

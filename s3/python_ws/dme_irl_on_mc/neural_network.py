@@ -32,6 +32,16 @@ def tanh(x, der=False):
         return 1 - np.power(t, 2)
 
 
+def elu(x, der=False):
+    ind = np.where(x <= 0)
+    if not der:
+        x[ind] = np.exp(x[ind])-1
+    else:
+        x[ind] = np.exp(x[ind])
+        x[x > 0] = 1
+    return x
+
+
 def relu(x, der=False):
     if not der:
         return np.maximum(x, 0)
@@ -81,8 +91,8 @@ class MyNN:
             self.nof_layers = len(nn_arch)  # including the input layer
             self.weights = []
             for (l1, l2) in zip(nn_arch[:-1], nn_arch[1:]):
-                # self.weights.append(np.random.uniform(high=0.05, size=(l1+1, l2)) - 0.025)  # +1 for augmenting bias
-                self.weights.append(np.random.normal(scale=0.2, size=(l1 + 1, l2)))  # +1 for augmenting the bias
+                self.weights.append(np.random.uniform(high=0.05, size=(l1+1, l2)) - 0.025)  # +1 for augmenting bias
+                # self.weights.append(np.random.normal(scale=0.2, size=(l1 + 1, l2)))  # +1 for augmenting the bias
                 self.last_weight_deltas.append(np.zeros((l1+1, l2)))
 
         else:  # TODO: shape calculation missing for now

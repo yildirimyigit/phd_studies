@@ -31,8 +31,8 @@ class DME:
     def run(self):
         state_array = np.asarray(self.irl_agent.env.state_list)
 
-        lr = 0.3
-        decay = 0.00003
+        lr = 1e-5
+        decay = 3e-9
 
         for i in range(self.iter_count):
             print('--- Iteration {0} ---'.format(i))
@@ -46,24 +46,23 @@ class DME:
             self.plot_reward(i)
 
             # solve mdp wrt current reward
-            self.irl_agent.backward_pass()
-            self.irl_agent.set_current_policy()
-            # self.irl_agent.forward_pass()   # calculate irl.esvc to use it in calculation of irl.exp_fc
             t0 = time.time()
-            self.irl_agent.fast_forward_pass()   # calculate irl.esvc to use it in calculation of irl.exp_fc
+            self.irl_agent.fast_backward_pass()
             t1 = time.time()
-
-            print('forward duration: {0}'.format(t1-t0))
+            self.irl_agent.fast_forward_pass()   # calculate irl.esvc to use it in calculation of irl.exp_fc
+            t2 = time.time()
+            print('\nDuration-- back: {0}, forward: {1}'.format(t1-t0, t2-t1))
 
             # calculate loss and euler distance to [0,0, ..., 0] which we want loss to be
             loss = self.irl_agent.emp_fc - self.irl_agent.exp_fc()
             euler_loss = np.power(np.sum(np.power(loss, 2)), 0.5)
 
-            lr = np.maximum(lr - decay, 0.0005)
-            self.irl_agent.rew_nn.backprop_diff(euler_loss, state_array, self.irl_agent.state_rewards, lr, momentum=0.5)
+            lr = np.maximum(lr - decay, 1e-10)
+            self.irl_agent.rew_nn.backprop_diff(euler_loss, state_array, self.irl_agent.state_rewards, lr, momentum=0.8)
 
             self.losses[i] = loss
             self.euler_losses[i] = euler_loss
+            print("Loss:" + str(euler_loss))
 
     def plot_reward(self, nof_iter):
         dim = int(np.sqrt(len(self.irl_agent.env.state_list)))
