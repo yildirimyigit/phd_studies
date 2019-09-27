@@ -11,7 +11,7 @@ vid_ep = 20
 
 
 class Environment(object):
-    def __init__(self, state_div=20, action_div=10):
+    def __init__(self, state_div=40, action_div=10):
         self.state_div = state_div
         self.action_div = action_div
         self.action_space = (-1, 1)
@@ -19,8 +19,6 @@ class Environment(object):
         self.state_list = []    # list of State objects
         self.action_list = []   # list of Action objects
 
-    # actions array has to be in between -1 and +1 thus if divided by 5:
-    # | -0.8 | -0.4 | 0 | 0.4 | 0.8 |
     def initialize_actions(self):
         print('+ Environment.initialize_actions()')
         action_interval = self.action_space[1]-self.action_space[0]
