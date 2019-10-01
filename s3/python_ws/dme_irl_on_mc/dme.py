@@ -51,7 +51,7 @@ class DME:
             t1 = time.time()
             self.irl_agent.fast_forward_pass()   # calculate irl.esvc to use it in calculation of irl.exp_fc
             t2 = time.time()
-            print('\nDuration-- back: {0}, forward: {1}'.format(t1-t0, t2-t1))
+            print('Duration-- back: {0}, forward: {1}'.format(t1-t0, t2-t1))
 
             # calculate loss and euler distance to [0,0, ..., 0] which we want loss to be
             loss = self.irl_agent.emp_fc - self.irl_agent.exp_fc()
@@ -62,7 +62,7 @@ class DME:
 
             self.losses[i] = loss
             self.euler_losses[i] = euler_loss
-            print("Loss:" + str(euler_loss))
+            print("Loss:" + str(euler_loss)+"\n")
 
     def plot_reward(self, nof_iter):
         dim = int(np.sqrt(len(self.irl_agent.env.state_list)))

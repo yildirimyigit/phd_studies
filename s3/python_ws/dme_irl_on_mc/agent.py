@@ -83,7 +83,7 @@ class IRLAgent:
 
         # self.state_id = self.env.start_id
 
-        self.vi_loop = 2500
+        self.vi_loop = 1500
         self.v = np.empty((len(self.env.states), self.vi_loop), dtype=float)
         self.q = np.empty((len(self.env.states), len(self.env.actions)), dtype=float)
         self.current_policy = np.empty((len(self.env.states), len(self.env.actions)), dtype=float)
@@ -143,7 +143,7 @@ class IRLAgent:
             sumexpq = np.sum(expq, axis=1)
             nonzero_ids = np.where(sumexpq != 0)
             zero_ids = np.where(sumexpq == 0)
-            v[nonzero_ids, 0] = np.exp(np.max(q[nonzero_ids], axis=1))/np.sum(expq[nonzero_ids], axis=1)
+            v[nonzero_ids, 0] = np.exp(np.max(q[nonzero_ids], axis=1))/sumexpq[nonzero_ids]
             v[zero_ids, 0] = -sys.float_info.max
 
             print('\rBackward Pass: {}'.format((i+1)), end='')
@@ -153,7 +153,7 @@ class IRLAgent:
         self.fast_policy = np.exp(q - np.reshape(v, (len(self.env.states), 1)))
 
         # self.plot_policy()
-        # print("\n- IRLAgent.backward_pass")
+        print("\n- IRLAgent.backward_pass")
 
     ###############################################
 
@@ -224,7 +224,7 @@ class IRLAgent:
         self.esvc = np.sum(self.esvc_mat, axis=1)
         # self.plot_esvc(path, 'esvc', self.esvc)
         # print('')
-        # print("\n- IRLAgent.forward_pass")
+        print("\n- IRLAgent.forward_pass")
 
     ###############################################
 
