@@ -83,15 +83,16 @@ class IRLAgent:
 
         # self.state_id = self.env.start_id
 
-        self.vi_loop = 1500
+        self.vi_loop = 3000
         self.v = np.empty((len(self.env.states), self.vi_loop), dtype=float)
         self.q = np.empty((len(self.env.states), len(self.env.actions)), dtype=float)
+        self.advantage = np.empty((len(self.env.states), len(self.env.actions)), dtype=float)
         self.current_policy = np.empty((len(self.env.states), len(self.env.actions)), dtype=float)
         self.fast_policy = np.empty((len(self.env.states), len(self.env.actions)), dtype=float)
         self.esvc = np.empty(len(self.env.states), dtype=float)
         self.esvc_mat = np.empty((len(self.env.states), self.vi_loop), dtype=float)
 
-        # to use in map
+        # to use in list compression
         self.cur_loop_ctr = 0
 
         self.emp_fc = 0
@@ -153,12 +154,44 @@ class IRLAgent:
 
         v[self.env.goal_id] = 0
         # current MaxEnt policy:
-        self.fast_policy = np.exp(q - np.reshape(v, (len(self.env.states), 1)))
+        self.advantage = q - np.reshape(v, (len(self.env.states), 1))
+        self.fast_policy = np.exp(self.advantage)
 
         # self.plot_policy()
         print("\n- IRLAgent.backward_pass")
 
-    ###############################################
+    ##############################################################################################
+    # [1]: Calculates fast_policy using an approximate version of Value Iteration algorithm
+    def ffast_backward_pass(self):
+        # print("+ IRLAgent.backward_pass")
+
+        v = np.ones((len(self.env.states), 1)) * -sys.float_info.max
+
+        for i in range(self.vi_loop-1):
+            v[self.env.goal_id] = 0
+            q = [(np.matmul(self.env.transition[s, :, :], v).T + self.state_rewards[s])[0]
+                 for s in range(len(self.env.states))]
+
+            # q = np.reshape(tq, (len(self.env.states), len(self.env.actions)))
+            # v = softmax_a q
+            # one problem:
+            # when np.sum(np.exp(q), axis=1) = 0, division by 0. In this case v = 0
+            expq = np.exp(q)
+            sumexpq = np.sum(expq, axis=1)
+            nonzero_ids = np.where(sumexpq != 0)
+            zero_ids = np.where(sumexpq == 0)
+            v[nonzero_ids, 0] = np.exp(np.max(np.array(q)[nonzero_ids], axis=1))/sumexpq[nonzero_ids]
+            v[zero_ids, 0] = -sys.float_info.max
+
+            print('\rBackward Pass: {}'.format((i+1)), end='')
+
+        v[self.env.goal_id] = 0
+        # current MaxEnt policy:
+        self.advantage = q - np.reshape(v, (len(self.env.states), 1))
+        self.fast_policy = np.exp(self.advantage)
+
+        # self.plot_policy()
+        print("\n- IRLAgent.backward_pass")
 
     ###############################################
     # [1]
