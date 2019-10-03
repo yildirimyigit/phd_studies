@@ -91,6 +91,9 @@ class IRLAgent:
         self.esvc = np.empty(len(self.env.states), dtype=float)
         self.esvc_mat = np.empty((len(self.env.states), self.vi_loop), dtype=float)
 
+        # to use in map
+        self.cur_loop_ctr = 0
+
         self.emp_fc = 0
         self.calculate_emp_fc()
 
@@ -168,6 +171,7 @@ class IRLAgent:
 
     ###############################################
     # [1]
+    # Simulates the propagation of the policy
     def forward_pass(self):  # esvc: expected state visitation count
         # print("+ IRLAgent.forward_pass")
 
@@ -214,8 +218,10 @@ class IRLAgent:
         self.esvc_mat[self.env.start_id, :] = 1
         # for i in range(10):
         for loop_ctr in range(self.vi_loop-1):  # type: int
+            self.cur_loop_ctr = loop_ctr
             self.esvc_mat[self.env.goal_id][loop_ctr] = 0
-            esvc_unnorm = self.fast_calc_esvc_unnorm(loop_ctr)
+            # esvc_unnorm = self.fast_calc_esvc_unnorm(loop_ctr)
+            esvc_unnorm = self.ffast_calc_esvc_unnorm()
 
             # normalization to calculate the frequencies.
             self.esvc_mat[:, loop_ctr + 1] = esvc_unnorm/sum(esvc_unnorm)
@@ -247,6 +253,18 @@ class IRLAgent:
                          * self.esvc_mat[i][loop_ctr]
 
         return np.sum(esvc, axis=1)
+
+    ###############################################
+
+    def ffast_calc_esvc_unnorm(self):
+        # esvc = map(self.esvcind, range(len(self.env.states)))
+        esvc = [self.esvcind(i) for i in range(len(self.env.states))]
+
+        return np.sum(esvc, axis=0)  #
+
+    def esvcind(self, ind):
+        return np.matmul(self.env.transition[ind][:][:].T, self.fast_policy[ind][:].T) \
+               * self.esvc_mat[ind][self.cur_loop_ctr]
 
     ###############################################
 
