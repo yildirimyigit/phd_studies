@@ -12,6 +12,7 @@ import seaborn as sb
 
 import os
 import time
+import matplotlib.pyplot as plt
 
 
 class DME:
@@ -31,8 +32,8 @@ class DME:
     def run(self):
         state_array = np.asarray(self.irl_agent.env.state_list)
 
-        lr = 0.3
-        decay = 0.00003
+        lr = 1e-5
+        decay = 3e-9
 
         for i in range(self.iter_count):
             print('--- Iteration {0} ---'.format(i))
@@ -46,24 +47,23 @@ class DME:
             self.plot_reward(i)
 
             # solve mdp wrt current reward
-            self.irl_agent.backward_pass()
-            self.irl_agent.set_current_policy()
-            # self.irl_agent.forward_pass()   # calculate irl.esvc to use it in calculation of irl.exp_fc
             t0 = time.time()
-            self.irl_agent.fast_forward_pass()   # calculate irl.esvc to use it in calculation of irl.exp_fc
+            self.irl_agent.fast_backward_pass()
             t1 = time.time()
-
-            print('forward duration: {0}'.format(t1-t0))
+            self.irl_agent.fast_forward_pass()   # calculate irl.esvc to use it in calculation of irl.exp_fc
+            t2 = time.time()
+            print('Duration-- back: {0}, forward: {1}'.format(t1-t0, t2-t1))
 
             # calculate loss and euler distance to [0,0, ..., 0] which we want loss to be
             loss = self.irl_agent.emp_fc - self.irl_agent.exp_fc()
             euler_loss = np.power(np.sum(np.power(loss, 2)), 0.5)
 
-            lr = np.maximum(lr - decay, 0.0005)
-            self.irl_agent.rew_nn.backprop_diff(euler_loss, state_array, self.irl_agent.state_rewards, lr, momentum=0.5)
+            lr = np.maximum(lr - decay, 1e-10)
+            self.irl_agent.rew_nn.backprop_diff(euler_loss, state_array, self.irl_agent.state_rewards, lr, momentum=0.8)
 
             self.losses[i] = loss
             self.euler_losses[i] = euler_loss
+            print("Loss:" + str(euler_loss)+"\n")
 
     def plot_reward(self, nof_iter):
         dim = int(np.sqrt(len(self.irl_agent.env.state_list)))
@@ -74,7 +74,24 @@ class DME:
         fig.savefig(self.reward_path + '/' + str(nof_iter) + '.png')
         fig.clf()
 
+    # testing value iteration algorithm of the agent
+    def test_backward_pass(self):
+        self.irl_agent.state_rewards = -np.ones((len(self.irl_agent.env.states), 1))
+        self.irl_agent.state_rewards[self.irl_agent.env.goal_id] = 100
+
+        self.irl_agent.fast_backward_pass()
+        draw_advantage(self.irl_agent.advantage)
+
+
+def draw_advantage(p):
+    td = np.max(p, axis=1)
+    dim = int(np.sqrt(len(td)))
+    data = np.reshape(td, (dim, dim))
+    _ = sb.heatmap(np.exp(data))
+    plt.show()
+
 
 if __name__ == "__main__":
     dme = DME()
-    dme.run()
+    # dme.run()
+    dme.test_backward_pass()
