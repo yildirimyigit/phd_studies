@@ -24,7 +24,7 @@ class IRLAgent:
 
         # To output the results, the following are used
         self.output_directory_suffix = str(int(time.time()))
-        self.output_directory_path = self.env.path + 'output/' + self.output_directory_suffix
+        self.output_directory_path = self.env.path + 'output/' + self.output_directory_suffix + "/"
         # Creating the output directory for the individual run
         os.makedirs(self.output_directory_path)
 
@@ -258,7 +258,7 @@ class IRLAgent:
 
         cumulative_emp_fc /= len(trajectories)  # normalization over all trajectories
         self.emp_fc = cumulative_emp_fc
-        self.plot_esvc(self.output_directory_path, 'empfc', self.emp_fc)
+        self.plot_emp_fc('empfc')
 
     def exp_fc(self):   # expected feature counts
         return np.matmul(self.esvc.T, self.env.state_list)
@@ -280,6 +280,16 @@ class IRLAgent:
         hm = sb.heatmap(np.reshape(data, (dim, dim)))
         fig = hm.get_figure()
         fig.savefig(path+'/' + name + '.png')
+        fig.clf()
+
+    def plot_emp_fc(self, name):
+        dim = int(np.sqrt(len(self.env.state_list)))
+        hm = sb.heatmap(np.reshape(self.emp_fc, (dim, dim)).T)
+        hm.set_title('Empirical Feature Counts')
+        hm.set_xlabel('x')
+        hm.set_ylabel('velocity')
+        fig = hm.get_figure()
+        fig.savefig(self.output_directory_path + name + '.png')
         fig.clf()
 
     def plot_esvc_mat(self, path, i):

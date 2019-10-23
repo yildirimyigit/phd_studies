@@ -93,5 +93,5 @@ def draw_advantage(p):
 
 if __name__ == "__main__":
     dme = DME()
-    # dme.run()
-    dme.test_backward_pass()
+    dme.run()
+    # dme.test_backward_pass()
