@@ -13,7 +13,11 @@ from gym import wrappers
 from collections import namedtuple
 import matplotlib.pyplot as plt
 
+from dme import sample_from_interval, cartesian_product
+
 Step = namedtuple('Step', 'state action')
+
+record_size = 5000000
 
 
 class Actor:
@@ -174,7 +178,7 @@ def UONoise():
         state += -theta*state+sigma*np.random.randn()
 
 
-def run():
+def run(ind):
     steps = []
     scores = []
     max_episode = 200
@@ -199,7 +203,7 @@ def run():
         actorAsync.set_session(sess)
         criticAsync.set_session(sess)
         env = gym.make('MountainCarContinuous-v0')
-        env = wrappers.Monitor(env, './tmp/', force=True)
+        env = wrappers.Monitor(env, './tmp/', force=True, video_callable=lambda episode_id: episode_id % 50 == 0)
         obs = env.reset()
         iteration = 0
         episode = 0
@@ -252,12 +256,18 @@ def run():
                 noise = UONoise()
                 if episode % 25 == 0:
                     saver.save(sess, save_path)
+
+                if episode > (max_episode-75):
+                    if np.mean(steps[-5:]) > 998:  # did not converge
+                        env.close()
+                        return False
             else:
                 obs = next_obs
-        ##############################################
+
+        # #############################################
         # After training finishes ####################
-        ##############################################
-        save_eps = 100
+        # #############################################
+        save_eps = 1000
         episode = 0
         trajectories = []
         trajectory = []
@@ -265,7 +275,7 @@ def run():
             print('\riter {}, ep {}'.format(iteration, episode), end='')
             action = actor.predict_action(np.reshape(obs, [1, -1]))[0]
             next_obs, reward, done, info = env.step(action)
-            trajectory.append(Step(state=obs, action=action))
+            trajectory.append([obs, action])
 
             # memory.append([obs, action, reward, next_obs, done])
             # memory_batch = memory.sample_batch(batch_size)
@@ -292,6 +302,7 @@ def run():
             iteration += 1
 
             if done:
+                trajectory.append([next_obs, action])
                 steps.append(episode_steps)
                 scores.append(episode_score)
                 print(', score {:8f}, steps {}'.format(episode_score, episode_steps))
@@ -311,9 +322,23 @@ def run():
             else:
                 obs = next_obs
 
-        np.save('trajectories/t3', np.array(trajectories))
-
+        np.save('trajectories/t_'+str(ind), np.array(trajectories))
+        # obss = np.hstack((env.observation_space.low, env.observation_space.high)).reshape(-1, 2).T
+        # ll = 0
+        # tsfs = np.zeros((record_size, 2, 2))
+        # while ll < record_size:
+        #     sampled_state = sample_from_interval(obss, 1)[0]
+        #     env.env.state = sampled_state
+        #     act = actor.predict_action(np.reshape(sampled_state, [1, -1]))[0]
+        #     if done:
+        #         env.reset()
+        #     next_state, _, done, _ = env.step(act)
+        #     tsfs[ll] = np.array([[next_state[0], next_state[1]], [sampled_state[0], sampled_state[1]]])
+        #     ll += 1
+        #
+        # np.save('trajectories/states'+str(ind), np.array(tsfs))
     env.close()
+    return True
 
     # ***************************
 
@@ -332,3 +357,10 @@ def run():
 
     fig1.legend()
     plt.show()
+
+
+for k in range(3):
+    succ = False
+    while not succ:
+        succ = run(k)
+
