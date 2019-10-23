@@ -19,6 +19,7 @@ def generate_model(e):
 # :param e Environment object
 def generate_trajectories(e, path='data/mccont_expert_trajs/'):
     trajectories = []
+    trajectories_of_ids = []
     for i in range(3):
         demonstrations = np.load(path+'t_'+str(i)+'.npy')
         j = 0
@@ -26,13 +27,19 @@ def generate_trajectories(e, path='data/mccont_expert_trajs/'):
             print('\rTrajectory file: {0}, Dem: {1} '.format(i, j), end='')
             j += 1
             trajectory = []
+            trajectory_of_ids = []
             for state_action in demonstration:
-                s = e.state_list[e.find_closest_state(State(state_action[0][0], state_action[0][1]))]
-                a = e.action_list[e.find_closest_action(Action(state_action[1][0]))]
+                sid = e.find_closest_state(State(state_action[0][0], state_action[0][1]))
+                aid = e.find_closest_action(Action(state_action[1][0]))
+                s = e.state_list[sid]
+                a = e.action_list[aid]
                 trajectory.append([[s.x, s.v], a.force])
+                trajectory_of_ids.append([sid, aid])
             trajectories.append(np.asarray(trajectory))
+            trajectories_of_ids.append(trajectory_of_ids)
         print('')
     np.save(path+'trajectories.npy', np.asarray(trajectories))
+    np.save(path+'trajectories_of_ids.npy', np.asarray(trajectories_of_ids))
 
 
 if __name__ == "__main__":
