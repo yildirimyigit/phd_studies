@@ -7,7 +7,7 @@ from utils import *
 
 
 class IRLMDP:
-    def __init__(self, path='data/'):
+    def __init__(self, path='data/mccont_expert_trajs/'):
         self.path = path
         self.states, self.actions, self.transition = self.create_env()
         self.state_list = self.get_state_list()

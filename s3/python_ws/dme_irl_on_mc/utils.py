@@ -1,10 +1,10 @@
 """
   @author: yigit.yildirim@boun.edu.tr
 """
-
-from collections import namedtuple
-
-Step = namedtuple('Step', 'state action')
+#
+# from collections import namedtuple
+#
+# Step = namedtuple('Step', 'state action')
 
 
 class State(object):
@@ -20,3 +20,7 @@ class State(object):
 class Action(object):
     def __init__(self, f=0):
         self.force = f
+
+    # euler
+    def distance(self, a):
+        return abs(a.force - self.force)
