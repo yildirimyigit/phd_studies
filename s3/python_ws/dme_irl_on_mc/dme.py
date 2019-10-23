@@ -79,8 +79,8 @@ class DME:
         self.irl_agent.state_rewards = -np.ones((len(self.irl_agent.env.states), 1))
         self.irl_agent.state_rewards[self.irl_agent.env.goal_id] = 100
 
-        self.irl_agent.fast_backward_pass()
-        draw_advantage(self.irl_agent.advantage)
+        # self.irl_agent.fast_backward_pass()
+        # draw_advantage(self.irl_agent.advantage)
 
 
 def draw_advantage(p):

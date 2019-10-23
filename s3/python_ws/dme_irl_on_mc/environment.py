@@ -72,6 +72,16 @@ class Environment(object):
 
         return min_ind
 
+    def find_closest_action(self, action):
+        min_ind = -1
+        min_dist = np.inf
+        for i in range(len(self.action_list)):
+            dist = action.distance(self.action_list[i])
+            if dist < min_dist:
+                min_dist = dist
+                min_ind = i
+        return min_ind
+
     def save_states(self, file_name):
         print('+ Environment.save_states()')
         np.save(file_name, np.asarray(self.state_list))

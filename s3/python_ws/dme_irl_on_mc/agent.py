@@ -13,67 +13,6 @@ import os
 import time
 
 
-# class RLAgent:
-#     def __init__(self):
-#         self.max_episode_steps = 1000
-#         self.learning_rate = 0.9
-#         self.epsilon = 0.25
-#         self.max_episode = 100000
-#         self.episode = 0
-#         self.episode_reward = 0
-#         self.episode_steps = 0
-#
-#         self.env = MDP()
-#         self.state_id = self.env.get_start_state()
-#         self.episode_rewards = np.zeros((self.max_episode, 1))
-#
-#         nof_actions = self.env.actions.shape[0]
-#         nof_states = self.env.states.shape[0]
-#         self.q_table = np.zeros((nof_states, nof_actions))
-#
-#     def act(self, action):
-#         self.state_id, reward, goal_reached = self.env.step(self.env.states[self.state_id], action)
-#         self.episode_steps += 1
-#         self.episode_reward += reward
-#         if goal_reached or self.episode_steps >= self.max_episode_steps:
-#             self.restart_episode()
-#             self.episode += 1
-#             return reward, True
-#         return reward, False
-#
-#     def restart_episode(self):
-#         self.episode_rewards[self.episode] = self.episode_reward
-#         print('Episode: {0} - Reward: {1}'.format(self.episode, self.episode_reward))
-#         self.episode_reward = 0
-#         self.episode_steps = 0
-#         self.state_id = self.env.get_start_state()
-#
-#     def initialize_q(self):
-#         self.q_table = np.random.rand(self.q_table.shape) / 100.0
-#
-#     def q_learn(self):
-#         self.initialize_q()
-#
-#         while self.episode < self.max_episode:
-#             episode_end = False
-#             while not episode_end:
-#                 chosen_action_id = self.choose_action()
-#                 p_sid = self.state_id
-#                 c_reward, episode_end = self.act(chosen_action_id)
-#                 self.q_table[p_sid][chosen_action_id] += self.learning_rate * (c_reward + self.env.gamma * np.max(
-#                     self.q_table[self.state_id][:]) - self.q_table[p_sid][chosen_action_id])
-#
-#     def choose_action(self):
-#         if np.random.rand() < self.get_epsilon():  # epsilon-greedy
-#             chosen_action = np.random.choice(range(self.env.actions.shape[0]))
-#         else:
-#             chosen_action = np.argmax(self.q_table[self.state_id][:])
-#         return chosen_action
-#
-#     def get_epsilon(self):  # decaying epsilon
-#         return np.max([0.05, self.epsilon*(1-(self.episode/self.max_episode))])
-
-
 class IRLAgent:
     def __init__(self):
         self.env = IRLMDP()
@@ -82,6 +21,12 @@ class IRLAgent:
         self.state_rewards = np.empty(len(self.env.states))
 
         # self.state_id = self.env.start_id
+
+        # To output the results, the following are used
+        self.output_directory_suffix = str(int(time.time()))
+        self.output_directory_path = self.env.path + 'output/' + self.output_directory_suffix
+        # Creating the output directory for the individual run
+        os.makedirs(self.output_directory_path)
 
         self.vi_loop = 3000
         self.v = np.empty((len(self.env.states), self.vi_loop), dtype=float)
@@ -95,7 +40,7 @@ class IRLAgent:
         # to use in list compression
         self.cur_loop_ctr = 0
 
-        self.emp_fc = 0
+        self.emp_fc = np.zeros(len(self.env.states))
         self.calculate_emp_fc()
 
     ###############################################
@@ -293,7 +238,7 @@ class IRLAgent:
         # esvc = map(self.esvcind, range(len(self.env.states)))
         esvc = [self.esvcind(i) for i in range(len(self.env.states))]
 
-        return np.sum(esvc, axis=0)  #
+        return np.sum(esvc, axis=0)
 
     def esvcind(self, ind):
         return np.matmul(self.env.transition[ind][:][:].T, self.fast_policy[ind][:].T) \
@@ -302,14 +247,18 @@ class IRLAgent:
     ###############################################
 
     def calculate_emp_fc(self):
-        trajectories = np.load(self.env.path + 'trajectories.npy', encoding='bytes', allow_pickle=True)
-        sum_traj_feats = []
+        cumulative_emp_fc = np.zeros_like(self.emp_fc)
+        trajectories = np.load(self.env.path + 'trajectories_of_ids.npy', encoding='bytes', allow_pickle=True)
         for trajectory in trajectories:
-            sum_traj_feats.append(np.sum(trajectory, axis=0))
+            current_trajectory_emp_fc = np.zeros_like(self.emp_fc)
+            for state_action in trajectory:  # state_action: [state, action]
+                current_trajectory_emp_fc[state_action[0]] += 1
+            current_trajectory_emp_fc /= len(trajectory)  # normalization over one trajectory
+            cumulative_emp_fc += current_trajectory_emp_fc
 
-        sum_all_feats = np.sum(sum_traj_feats, axis=0)
-        self.emp_fc = sum_all_feats/len(trajectories)
-        # self.plot_esvc('data/figures/forward_pass', 'empfc', self.emp_fc)
+        cumulative_emp_fc /= len(trajectories)  # normalization over all trajectories
+        self.emp_fc = cumulative_emp_fc
+        self.plot_esvc(self.output_directory_path, 'empfc', self.emp_fc)
 
     def exp_fc(self):   # expected feature counts
         return np.matmul(self.esvc.T, self.env.state_list)
