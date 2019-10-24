@@ -20,20 +20,22 @@ class DME:
         self.irl_agent = IRLAgent()
         self.iter_count = 10000
 
-        self.losses = np.zeros((self.iter_count, len(self.irl_agent.emp_fc)))
-        self.euler_losses = np.zeros(self.iter_count)
+        # self.losses = np.zeros((self.iter_count, len(self.irl_agent.emp_fc)))
+        self.cumulative_dists = np.zeros(self.iter_count)
 
         # #######################################################################
         # create the directory to be used for plotting for rewards
-        self.reward_path = self.irl_agent.env.path + 'figures/reward/' + str(int(time.time()))
+        self.reward_path = self.irl_agent.output_directory_path + 'reward/'
+        self.loss_path = self.irl_agent.output_directory_path + 'loss/'
         os.makedirs(self.reward_path)
+        os.makedirs(self.loss_path)
         # #######################################################################
 
     def run(self):
         state_array = np.asarray(self.irl_agent.env.state_list)
 
-        lr = 1e-5
-        decay = 3e-9
+        lr = 1e-3
+        decay = 3e-7
 
         for i in range(self.iter_count):
             print('--- Iteration {0} ---'.format(i))
@@ -55,15 +57,17 @@ class DME:
             print('Duration-- back: {0}, forward: {1}'.format(t1-t0, t2-t1))
 
             # calculate loss and euler distance to [0,0, ..., 0] which we want loss to be
-            loss = self.irl_agent.emp_fc - self.irl_agent.exp_fc()
-            euler_loss = np.power(np.sum(np.power(loss, 2)), 0.5)
+            # loss = self.irl_agent.emp_fc - self.irl_agent.exp_fc()  # FAULTY exp_fc calculation
+            diff = self.irl_agent.emp_fc - self.irl_agent.esvc
+            dist = np.abs(diff)
 
             lr = np.maximum(lr - decay, 1e-10)
-            self.irl_agent.rew_nn.backprop_diff(euler_loss, state_array, self.irl_agent.state_rewards, lr, momentum=0.8)
+            self.irl_agent.rew_nn.backprop_diff(dist, state_array, self.irl_agent.state_rewards, lr, momentum=0.5)
 
-            self.losses[i] = loss
-            self.euler_losses[i] = euler_loss
-            print("Loss:" + str(euler_loss)+"\n")
+            # self.losses[i] = dist
+            self.cumulative_dists[i] = np.sum(dist)
+            print("Distance:" + str(self.cumulative_dists[i])+"\n")
+            self.plot_cumulative_dists(i)
 
     def plot_reward(self, nof_iter):
         dim = int(np.sqrt(len(self.irl_agent.env.state_list)))
@@ -71,8 +75,12 @@ class DME:
 
         hm = sb.heatmap(data)
         fig = hm.get_figure()
-        fig.savefig(self.reward_path + '/' + str(nof_iter) + '.png')
+        fig.savefig(self.reward_path + str(nof_iter) + '.png')
         fig.clf()
+
+    def plot_cumulative_dists(self, i):
+        plt.plot(range(i), self.cumulative_dists[:i])
+        plt.savefig(self.loss_path + str(i) + '.png')
 
     # testing value iteration algorithm of the agent
     def test_backward_pass(self):
