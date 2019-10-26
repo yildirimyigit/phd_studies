@@ -34,8 +34,8 @@ class DME:
     def run(self):
         state_array = np.asarray(self.irl_agent.env.state_list)
 
-        lr = 1e-3
-        decay = 3e-7
+        lr = 1e-2
+        decay = 3e-5
 
         for i in range(self.iter_count):
             print('--- Iteration {0} ---'.format(i))
@@ -59,10 +59,10 @@ class DME:
             # calculate loss and euler distance to [0,0, ..., 0] which we want loss to be
             # loss = self.irl_agent.emp_fc - self.irl_agent.exp_fc()  # FAULTY exp_fc calculation
             diff = self.irl_agent.emp_fc - self.irl_agent.esvc
-            dist = np.abs(diff)
+            dist = np.exp(diff)  # np.abs(diff)
 
             lr = np.maximum(lr - decay, 1e-10)
-            self.irl_agent.rew_nn.backprop_diff(dist, state_array, self.irl_agent.state_rewards, lr, momentum=0.5)
+            self.irl_agent.rew_nn.backprop_diff(dist, state_array, self.irl_agent.state_rewards, lr, momentum=0.75)
 
             # self.losses[i] = dist
             self.cumulative_dists[i] = np.sum(dist)

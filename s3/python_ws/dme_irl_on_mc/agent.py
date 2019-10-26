@@ -170,7 +170,7 @@ class IRLAgent:
             for j in range(len(self.env.states)):
                 esvc_unnorm[j] = self.calc_esvc_unnorm(j, loop_ctr)
 
-            # normalization to calculate the frequencies. Rounding just because.
+            # normalization to calculate the frequencies
             self.esvc_mat[:, loop_ctr + 1] = esvc_unnorm/sum(esvc_unnorm)
             print('\rForward Pass: {}'.format((loop_ctr+1)), end='')
             self.plot_esvc_mat(path, loop_ctr)
@@ -206,7 +206,7 @@ class IRLAgent:
             self.esvc_mat[:, loop_ctr + 1] = esvc_unnorm/sum(esvc_unnorm)
             print('\rForward Pass: {}'.format((loop_ctr+1)), end='')
             # self.plot_esvc_mat(path, loop_ctr)
-        self.esvc = np.sum(self.esvc_mat, axis=1)
+        self.esvc = np.sum(self.esvc_mat, axis=1)/self.vi_loop  # averaging over <self.vi_loop> many examples
         # self.plot_esvc(path, 'esvc', self.esvc)
         # print('')
         print("\n- IRLAgent.forward_pass")
