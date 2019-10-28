@@ -47,6 +47,7 @@ class DME:
             # print('***Rewards')
 
             self.plot_reward(i)
+            self.plot_reward2(i)
 
             # solve mdp wrt current reward
             t0 = time.time()
@@ -77,6 +78,11 @@ class DME:
         fig = hm.get_figure()
         fig.savefig(self.reward_path + str(nof_iter) + '.png')
         fig.clf()
+
+    def plot_reward2(self, nof_iter):
+        plt.ylim(-0.5, 0.5)
+        plt.plot(range(len(self.irl_agent.state_rewards)), self.irl_agent.state_rewards)
+        plt.savefig(self.reward_path + '_' + str(nof_iter) + '.png')
 
     def plot_cumulative_dists(self, i):
         plt.plot(range(i), self.cumulative_dists[:i])
