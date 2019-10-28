@@ -1,7 +1,7 @@
 """
   author: yigit.yildirim@boun.edu.tr
 
-  Note: The math and the code belongs to me but I borrowed some minor ideas from Ryan Harris'
+  Note: The math and the code belongs to me but I borrowed some ideas from Ryan Harris'
   explanations on YouTube: https://www.youtube.com/watch?v=XqRUHEeiyCs
 """
 
@@ -147,7 +147,7 @@ class MyNN:
         diff, total_error = sum_error(y, y_hat)
         for i in reversed(range(self.nof_layers-1)):
             if i == self.nof_layers - 2:  # output of the last layer
-                deltas.append(diff*self.activations[i](y_hat, der=True))  # diff of each instance in the batch
+                deltas.append(diff * self.activations[i](y_hat, der=True))  # diff of each instance in the batch
                 # is multiplied by the corresponding derivative
             else:
                 last_delta = deltas[-1]
@@ -172,6 +172,7 @@ class MyNN:
         return total_error
 
     def backprop_diff(self, diff, x, y_hat, lr=0.15, momentum=0.5):
+        diff = np.reshape(diff, np.shape(y_hat))
         batch_size = len(x)
         deltas = []
         for i in reversed(range(self.nof_layers-1)):

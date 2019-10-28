@@ -2,6 +2,7 @@
   @author: yigit.yildirim@boun.edu.tr
 
   [1]: Kitani 2012, Activity Forecasting
+  [2]: Wulfmeier 2016, Maximum Entropy Deep Inverse Reinforcement Learning
 """
 import numpy as np
 from env import IRLMDP
@@ -17,7 +18,7 @@ class IRLAgent:
     def __init__(self):
         self.env = IRLMDP()
         # initializes nn with random weights
-        self.rew_nn = MyNN(nn_arch=(2, 400, 300, 1), acts=[sigm, sigm, linear])
+        self.rew_nn = MyNN(nn_arch=(2, 64, 32, 1), acts=[sigm, sigm, linear])
         self.state_rewards = np.empty(len(self.env.states))
 
         # self.state_id = self.env.start_id
@@ -28,7 +29,7 @@ class IRLAgent:
         # Creating the output directory for the individual run
         os.makedirs(self.output_directory_path)
 
-        self.vi_loop = 3000
+        self.vi_loop = 1000
         self.v = np.empty((len(self.env.states), self.vi_loop), dtype=float)
         self.q = np.empty((len(self.env.states), len(self.env.actions)), dtype=float)
         self.advantage = np.empty((len(self.env.states), len(self.env.actions)), dtype=float)
@@ -169,7 +170,7 @@ class IRLAgent:
             for j in range(len(self.env.states)):
                 esvc_unnorm[j] = self.calc_esvc_unnorm(j, loop_ctr)
 
-            # normalization to calculate the frequencies. Rounding just because.
+            # normalization to calculate the frequencies
             self.esvc_mat[:, loop_ctr + 1] = esvc_unnorm/sum(esvc_unnorm)
             print('\rForward Pass: {}'.format((loop_ctr+1)), end='')
             self.plot_esvc_mat(path, loop_ctr)
@@ -205,7 +206,7 @@ class IRLAgent:
             self.esvc_mat[:, loop_ctr + 1] = esvc_unnorm/sum(esvc_unnorm)
             print('\rForward Pass: {}'.format((loop_ctr+1)), end='')
             # self.plot_esvc_mat(path, loop_ctr)
-        self.esvc = np.sum(self.esvc_mat, axis=1)
+        self.esvc = np.sum(self.esvc_mat, axis=1)/self.vi_loop  # averaging over <self.vi_loop> many examples
         # self.plot_esvc(path, 'esvc', self.esvc)
         # print('')
         print("\n- IRLAgent.forward_pass")
@@ -260,8 +261,9 @@ class IRLAgent:
         self.emp_fc = cumulative_emp_fc
         self.plot_emp_fc('empfc')
 
-    def exp_fc(self):   # expected feature counts
-        return np.matmul(self.esvc.T, self.env.state_list)
+    # def exp_fc(self):   # expected feature counts
+    #     # return np.matmul(self.esvc.T, self.env.state_list)
+    #     return self.esvc
 
     def policy(self, sid, aid):
         return np.exp(self.q[sid][aid] - self.v[sid, -1])   # last column in the v matrix
