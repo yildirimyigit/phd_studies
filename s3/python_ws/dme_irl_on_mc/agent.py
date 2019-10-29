@@ -19,7 +19,7 @@ class IRLAgent:
         self.env = IRLMDP()
         # initializes nn with random weights
         self.rew_nn = MyNN(nn_arch=(2, 400, 300, 1), acts=[sigm, sigm, linear])
-        self.state_rewards = np.empty(len(self.env.states))
+        self.state_rewards = np.empty(len(self.env.states), dtype=float)
 
         # self.state_id = self.env.start_id
 

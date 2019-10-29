@@ -40,7 +40,17 @@ class DME:
         for i in range(self.iter_count):
             print('--- Iteration {0} ---'.format(i))
             # calculate state rewards
-            self.irl_agent.state_rewards = self.irl_agent.reward_batch()
+            temp = self.irl_agent.reward_batch()
+            mint = np.min(temp)
+            maxt = np.max(temp)
+            temp -= mint
+            temp /= (maxt - mint)/2
+            temp -= 1
+
+            if i >= 1:
+                self.plot_reward_delta(self.irl_agent.state_rewards-temp, i)
+
+            self.irl_agent.state_rewards = temp
 
             # print('***Rewards')
             # print(self.irl_agent.state_rewards)
@@ -80,13 +90,24 @@ class DME:
         fig.clf()
 
     def plot_reward2(self, nof_iter):
-        plt.ylim(-0.5, 0.5)
+        plt.ylim(-1, 1)
         plt.plot(range(len(self.irl_agent.state_rewards)), self.irl_agent.state_rewards)
         plt.savefig(self.reward_path + '_' + str(nof_iter) + '.png')
+        plt.clf()
+
+    def plot_reward_delta(self, delta, i):
+        dim = int(np.sqrt(len(self.irl_agent.env.state_list)))
+        data = np.reshape(delta, (dim, dim))
+
+        hm = sb.heatmap(data)
+        fig = hm.get_figure()
+        fig.savefig(self.reward_path + 'delta_' + str(i) + '.png')
+        fig.clf()
 
     def plot_cumulative_dists(self, i):
         plt.plot(range(i), self.cumulative_dists[:i])
         plt.savefig(self.loss_path + str(i) + '.png')
+        plt.clf()
 
     # testing value iteration algorithm of the agent
     def test_backward_pass(self):
