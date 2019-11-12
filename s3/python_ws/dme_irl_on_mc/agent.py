@@ -275,7 +275,22 @@ class IRLAgent:
         return self.rew_nn.forward(np.asarray([state.x, state.v]))
 
     def reward_batch(self):
-        return self.rew_nn.forward_batch(np.asarray(self.env.state_list))
+        return self.rew_nn.forward_batch(np.asarray(self.mc_normalized_states()))
+
+    def mc_normalized_states(self):
+        normalized_states = np.asarray(self.env.state_list)
+
+        min0 = np.min(normalized_states[:, 0])
+        min1 = np.min(normalized_states[:, 1])
+        max0 = np.max(normalized_states[:, 0])
+        max1 = np.max(normalized_states[:, 1])
+
+        normalized_states -= [min0, min1]
+        normalized_states /= [max0-min0, max1-min1]
+
+        a = normalized_states.tolist()
+
+        return a
 
     def plot_esvc(self, path, name, data):
         dim = int(np.sqrt(len(self.env.state_list)))

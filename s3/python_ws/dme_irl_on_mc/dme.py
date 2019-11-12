@@ -41,11 +41,6 @@ class DME:
             print('--- Iteration {0} ---'.format(i))
             # calculate state rewards
             temp = self.irl_agent.reward_batch()
-            mint = np.min(temp)
-            maxt = np.max(temp)
-            temp -= mint
-            temp /= (maxt - mint)/2
-            temp -= 1
 
             if i >= 1:
                 self.plot_reward_delta(self.irl_agent.state_rewards-temp, i)
@@ -90,7 +85,7 @@ class DME:
         fig.clf()
 
     def plot_reward2(self, nof_iter):
-        plt.ylim(-1, 1)
+        plt.ylim(-0.2, 0.2)
         plt.plot(range(len(self.irl_agent.state_rewards)), self.irl_agent.state_rewards)
         plt.savefig(self.reward_path + '_' + str(nof_iter) + '.png')
         plt.clf()
