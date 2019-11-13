@@ -6,7 +6,7 @@
 """
 import numpy as np
 from env import IRLMDP
-from neural_network import MyNN, sigm, linear, tanh, gaussian, relu, elu
+from neural_network import MyNN, sigm, linear
 
 import sys
 import seaborn as sb
@@ -18,8 +18,8 @@ class IRLAgent:
     def __init__(self):
         self.env = IRLMDP()
         # initializes nn with random weights
-        self.rew_nn = MyNN(nn_arch=(2, 64, 32, 1), acts=[sigm, sigm, linear])
-        self.state_rewards = np.empty(len(self.env.states))
+        self.rew_nn = MyNN(nn_arch=(2, 400, 300, 1), acts=[sigm, sigm, linear])
+        self.state_rewards = np.empty(len(self.env.states), dtype=float)
 
         # self.state_id = self.env.start_id
 
@@ -275,7 +275,22 @@ class IRLAgent:
         return self.rew_nn.forward(np.asarray([state.x, state.v]))
 
     def reward_batch(self):
-        return self.rew_nn.forward_batch(np.asarray(self.env.state_list))
+        return self.rew_nn.forward_batch(np.asarray(self.mc_normalized_states()))
+
+    def mc_normalized_states(self):
+        normalized_states = np.asarray(self.env.state_list)
+
+        min0 = np.min(normalized_states[:, 0])
+        min1 = np.min(normalized_states[:, 1])
+        max0 = np.max(normalized_states[:, 0])
+        max1 = np.max(normalized_states[:, 1])
+
+        normalized_states -= [min0, min1]
+        normalized_states /= [max0-min0, max1-min1]
+
+        a = normalized_states.tolist()
+
+        return a
 
     def plot_esvc(self, path, name, data):
         dim = int(np.sqrt(len(self.env.state_list)))

@@ -34,19 +34,25 @@ class DME:
     def run(self):
         state_array = np.asarray(self.irl_agent.env.state_list)
 
-        lr = 2e-1
-        decay = 2e-4
+        lr = 1e-2
+        decay = 1e-6
 
         for i in range(self.iter_count):
             print('--- Iteration {0} ---'.format(i))
             # calculate state rewards
-            self.irl_agent.state_rewards = self.irl_agent.reward_batch()
+            temp = self.irl_agent.reward_batch()
+
+            if i >= 1:
+                self.plot_reward_delta(self.irl_agent.state_rewards-temp, i)
+
+            self.irl_agent.state_rewards = temp
 
             # print('***Rewards')
             # print(self.irl_agent.state_rewards)
             # print('***Rewards')
 
             self.plot_reward(i)
+            self.plot_reward2(i)
 
             # solve mdp wrt current reward
             t0 = time.time()
@@ -59,7 +65,7 @@ class DME:
             # calculate loss and euler distance to [0,0, ..., 0] which we want loss to be
             # loss = self.irl_agent.emp_fc - self.irl_agent.exp_fc()  # FAULTY exp_fc calculation
             diff = self.irl_agent.emp_fc - self.irl_agent.esvc
-            dist = np.exp(diff)-1  # np.abs(diff)
+            dist = np.power(diff, 2) * 1e4
 
             lr = np.maximum(lr - decay, 1e-10)
             self.irl_agent.rew_nn.backprop_diff(dist, state_array, self.irl_agent.state_rewards, lr, momentum=0.75)
@@ -78,9 +84,25 @@ class DME:
         fig.savefig(self.reward_path + str(nof_iter) + '.png')
         fig.clf()
 
+    def plot_reward2(self, nof_iter):
+        # plt.ylim(-0.2, 0.2)
+        plt.plot(range(len(self.irl_agent.state_rewards)), self.irl_agent.state_rewards)
+        plt.savefig(self.reward_path + '_' + str(nof_iter) + '.png')
+        plt.clf()
+
+    def plot_reward_delta(self, delta, i):
+        dim = int(np.sqrt(len(self.irl_agent.env.state_list)))
+        data = np.reshape(delta, (dim, dim))
+
+        hm = sb.heatmap(data)
+        fig = hm.get_figure()
+        fig.savefig(self.reward_path + 'delta_' + str(i) + '.png')
+        fig.clf()
+
     def plot_cumulative_dists(self, i):
         plt.plot(range(i), self.cumulative_dists[:i])
         plt.savefig(self.loss_path + str(i) + '.png')
+        plt.clf()
 
     # testing value iteration algorithm of the agent
     def test_backward_pass(self):
