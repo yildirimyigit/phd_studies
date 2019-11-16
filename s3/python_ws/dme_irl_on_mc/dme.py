@@ -42,8 +42,8 @@ class DME:
             # calculate state rewards
             temp = self.irl_agent.reward_batch()
 
-            if i >= 1:
-                self.plot_reward_delta(self.irl_agent.state_rewards-temp, i)
+            # if i >= 1:
+            #     self.plot_reward_delta(self.irl_agent.state_rewards-temp, i)
 
             self.irl_agent.state_rewards = temp
 
@@ -52,7 +52,7 @@ class DME:
             # print('***Rewards')
 
             self.plot_reward(i)
-            self.plot_reward2(i)
+            # self.plot_reward2(i)
 
             # solve mdp wrt current reward
             t0 = time.time()
