@@ -30,6 +30,8 @@ class DME:
         os.makedirs(self.reward_path)
         os.makedirs(self.loss_path)
         # #######################################################################
+        self.rewards_file = open(self.reward_path + 'rewards.txt', "a+")
+        # #######################################################################
 
     def run(self):
         state_array = np.asarray(self.irl_agent.env.state_list)
@@ -50,7 +52,7 @@ class DME:
             # print('***Rewards')
             # print(self.irl_agent.state_rewards)
             # print('***Rewards')
-
+            self.save_reward(i)
             self.plot_reward(i)
             # self.plot_reward2(i)
 
@@ -83,6 +85,13 @@ class DME:
         fig = hm.get_figure()
         fig.savefig(self.reward_path + str(nof_iter) + '.png')
         fig.clf()
+
+    def save_reward(self, nof_iter):
+        self.rewards_file.write(str(nof_iter) + "\n")
+        for r in self.irl_agent.state_rewards:
+            self.rewards_file.write(str(r) + " ")
+        self.rewards_file.write('\n')
+        self.rewards_file.flush()
 
     def plot_reward2(self, nof_iter):
         # plt.ylim(-0.2, 0.2)
