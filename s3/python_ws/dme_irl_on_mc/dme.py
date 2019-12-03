@@ -88,9 +88,14 @@ class DME:
 
     def save_reward(self, nof_iter):
         self.rewards_file.write(str(nof_iter) + "\n")
-        for r in self.irl_agent.state_rewards:
-            self.rewards_file.write(str(r) + " ")
-        self.rewards_file.write('\n')
+        self.rewards_file.write("[ ")
+
+        for r, i in enumerate(self.irl_agent.state_rewards):
+            self.rewards_file.write(str(r))
+            if i != len(self.irl_agent.state_rewards):
+                self.rewards_file.write(", ")
+
+        self.rewards_file.write("] \n")
         self.rewards_file.flush()
 
     def plot_reward2(self, nof_iter):
