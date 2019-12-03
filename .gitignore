@@ -108,3 +108,4 @@ venv.bak/
 # numpy data files
 .npy
 data/
+tmp/
