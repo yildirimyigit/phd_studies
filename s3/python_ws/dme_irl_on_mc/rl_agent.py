@@ -13,7 +13,7 @@ class RLAgent:
         self.policy = np.zeros((len(self.env.states), len(self.env.actions)))
 
     def appr_vi(self, rewards):
-        v = np.ones((len(self.env.states), 1)) * -sys.float_info.max/2
+        v = np.ones((len(self.env.states), 1)) * -sys.float_info.max
         q = np.zeros((len(self.env.states), len(self.env.actions)))
 
         for i in range(self.vi_loop - 1):
