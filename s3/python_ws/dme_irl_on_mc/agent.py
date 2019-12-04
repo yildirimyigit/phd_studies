@@ -204,7 +204,7 @@ class IRLAgent:
 
             # normalization to calculate the frequencies.
             self.esvc_mat[:, loop_ctr + 1] = esvc_unnorm/sum(esvc_unnorm)
-            print('\rForward Pass: {}'.format((loop_ctr+1)), end='')
+            # print('\rForward Pass: {}'.format((loop_ctr+1)), end='')
             # self.plot_esvc_mat(path, loop_ctr)
         self.esvc = np.sum(self.esvc_mat, axis=1)/self.vi_loop  # averaging over <self.vi_loop> many examples
         # self.plot_esvc(path, 'esvc', self.esvc)
