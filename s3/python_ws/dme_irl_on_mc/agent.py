@@ -6,7 +6,7 @@
 """
 import numpy as np
 from env import IRLMDP
-from neural_network import MyNN, sigm, linear
+from neural_network import MyNN, sigm, tanh
 
 import sys
 import seaborn as sb
@@ -18,7 +18,7 @@ class IRLAgent:
     def __init__(self):
         self.env = IRLMDP()
         # initializes nn with random weights
-        self.rew_nn = MyNN(nn_arch=(2, 400, 300, 1), acts=[sigm, sigm, linear])
+        self.rew_nn = MyNN(nn_arch=(2, 400, 300, 1), acts=[sigm, sigm, tanh])
         self.state_rewards = np.empty(len(self.env.states), dtype=float)
 
         # self.state_id = self.env.start_id
@@ -97,14 +97,14 @@ class IRLAgent:
             v[zero_ids, 0] = -sys.float_info.max
 
             print('\rBackward Pass: {}'.format((i+1)), end='')
-
+        print('')
         v[self.env.goal_id] = 0
         # current MaxEnt policy:
         self.advantage = q - np.reshape(v, (len(self.env.states), 1))
         self.fast_policy = np.exp(self.advantage)
 
         # self.plot_policy()
-        print("\n- IRLAgent.backward_pass")
+        # print("\n- IRLAgent.backward_pass")
 
     ##############################################################################################
     # [1]: Calculates fast_policy using an approximate version of Value Iteration algorithm
@@ -137,7 +137,7 @@ class IRLAgent:
         self.fast_policy = np.exp(self.advantage)
 
         # self.plot_policy()
-        print("\n- IRLAgent.backward_pass")
+        # print("\n- IRLAgent.backward_pass")
 
     ###############################################
     # [1]
@@ -177,7 +177,7 @@ class IRLAgent:
         self.esvc = np.sum(self.esvc_mat, axis=1)
         self.plot_esvc(path, 'esvc', self.esvc)
         print('')
-        print("\n- IRLAgent.forward_pass")
+        # print("\n- IRLAgent.forward_pass")
 
     ###############################################
 
@@ -204,12 +204,13 @@ class IRLAgent:
 
             # normalization to calculate the frequencies.
             self.esvc_mat[:, loop_ctr + 1] = esvc_unnorm/sum(esvc_unnorm)
-            # print('\rForward Pass: {}'.format((loop_ctr+1)), end='')
+            print('\rForward Pass: {}'.format((loop_ctr+1)), end='')
             # self.plot_esvc_mat(path, loop_ctr)
+        print('')
         self.esvc = np.sum(self.esvc_mat, axis=1)/self.vi_loop  # averaging over <self.vi_loop> many examples
         # self.plot_esvc(path, 'esvc', self.esvc)
         # print('')
-        print("\n- IRLAgent.forward_pass")
+        # print("\n- IRLAgent.forward_pass")
 
     ###############################################
 

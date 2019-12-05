@@ -50,7 +50,7 @@ class DME:
 
             self.irl_agent.state_rewards = temp
             # self.save_reward0(i)
-            # self.irl_agent.state_rewards = np.interp(temp, (temp.min(), temp.max()), (-100, 100))  # temp * 100
+            # self.irl_agent.state_rewards = temp * 100  # np.interp(temp, (temp.min(), temp.max()), (-100, 100))
 
             # print('***Rewards')
             # print(self.irl_agent.state_rewards)
