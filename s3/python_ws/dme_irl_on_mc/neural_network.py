@@ -91,8 +91,8 @@ class MyNN:
             self.nof_layers = len(nn_arch)  # including the input layer
             self.weights = []
             for (l1, l2) in zip(nn_arch[:-1], nn_arch[1:]):
-                # self.weights.append(np.random.uniform(high=0.05, size=(l1+1, l2)) - 0.025)  # +1 for augmenting bias
-                self.weights.append(np.random.normal(scale=0.2, size=(l1 + 1, l2)))  # +1 for augmenting the bias
+                self.weights.append(np.random.uniform(high=0.01, size=(l1+1, l2)))  # +1 for augmenting bias
+                # self.weights.append(np.random.normal(scale=0.2, size=(l1 + 1, l2)))  # +1 for augmenting the bias
                 self.last_weight_deltas.append(np.zeros((l1+1, l2)))
 
         else:  # TODO: shape calculation missing for now

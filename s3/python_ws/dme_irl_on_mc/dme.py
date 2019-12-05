@@ -31,6 +31,7 @@ class DME:
         os.makedirs(self.loss_path)
         # #######################################################################
         self.rewards_file = open(self.reward_path + 'rewards.txt', "a+")
+        self.rewards_file0 = open(self.reward_path + 'rewards0.txt', "a+")
         # #######################################################################
 
     def run(self):
@@ -48,6 +49,8 @@ class DME:
             #     self.plot_reward_delta(self.irl_agent.state_rewards-temp, i)
 
             self.irl_agent.state_rewards = temp
+            # self.save_reward0(i)
+            # self.irl_agent.state_rewards = temp * 100  # np.interp(temp, (temp.min(), temp.max()), (-100, 100))
 
             # print('***Rewards')
             # print(self.irl_agent.state_rewards)
@@ -86,13 +89,25 @@ class DME:
         fig.savefig(self.reward_path + str(nof_iter) + '.png')
         fig.clf()
 
+    def save_reward0(self, nof_iter):
+        self.rewards_file0.write(str(nof_iter) + "\n")
+        self.rewards_file0.write("[")
+
+        for i, r in enumerate(self.irl_agent.state_rewards):
+            self.rewards_file0.write(str(r))
+            if i != len(self.irl_agent.state_rewards)-1:
+                self.rewards_file0.write(", ")
+
+        self.rewards_file0.write("] \n")
+        self.rewards_file0.flush()
+
     def save_reward(self, nof_iter):
         self.rewards_file.write(str(nof_iter) + "\n")
-        self.rewards_file.write("[ ")
+        self.rewards_file.write("[")
 
-        for r, i in enumerate(self.irl_agent.state_rewards):
+        for i, r in enumerate(self.irl_agent.state_rewards):
             self.rewards_file.write(str(r))
-            if i != len(self.irl_agent.state_rewards):
+            if i != len(self.irl_agent.state_rewards)-1:
                 self.rewards_file.write(", ")
 
         self.rewards_file.write("] \n")
