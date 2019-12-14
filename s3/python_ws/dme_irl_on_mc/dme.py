@@ -6,6 +6,10 @@
 """
 
 import numpy as np
+import torch
+import torch.nn as nn
+import torch.nn.functional as funct
+import torch.optim as optim
 from agent import IRLAgent
 
 import seaborn as sb
@@ -18,17 +22,15 @@ import matplotlib.pyplot as plt
 class DME:
     def __init__(self):
         self.irl_agent = IRLAgent()
-        self.iter_count = 10000
+        self.epochs = 10000
 
-        # self.losses = np.zeros((self.iter_count, len(self.irl_agent.emp_fc)))
-        self.cumulative_dists = np.zeros(self.iter_count)
+        self.losses = np.zeros(self.epochs)
 
         # #######################################################################
         # create the directory to be used for plotting for rewards
         self.reward_path = self.irl_agent.output_directory_path + 'reward/'
-        self.loss_path = self.irl_agent.output_directory_path + 'loss/'
+        self.loss_path = self.irl_agent.output_directory_path + ''
         os.makedirs(self.reward_path)
-        os.makedirs(self.loss_path)
         # #######################################################################
         self.rewards_file = open(self.reward_path + 'rewards.txt', "a+")
         self.rewards_file0 = open(self.reward_path + 'rewards0.txt', "a+")
@@ -37,26 +39,19 @@ class DME:
     def run(self):
         state_array = np.asarray(self.irl_agent.env.state_list)
 
-        lr = 1e-2
-        decay = 1e-6
+        optimizer = optim.Adam(self.irl_agent.nn.parameters(), lr=0.001)
 
-        for i in range(self.iter_count):
+        for i in range(self.epochs):
             print('--- Iteration {0} ---'.format(i))
             # calculate state rewards
-            temp = self.irl_agent.reward_batch()
+            reward_tensor, state_ids = self.irl_agent.get_rewards()
 
-            # if i >= 1:
-            #     self.plot_reward_delta(self.irl_agent.state_rewards-temp, i)
-
-            self.irl_agent.state_rewards = temp
+            self.irl_agent.state_rewards = reward_tensor  # TODO: to numpy
             # self.save_reward0(i)
             # self.irl_agent.state_rewards = np.interp(temp, (temp.min(), temp.max()), (-1, 1))  # temp * 100
 
-            # print('***Rewards')
-            # print(self.irl_agent.state_rewards)
-            # print('***Rewards')
             self.save_reward(i)
-            self.plot_reward(i)
+            # self.plot_reward(i)
             # self.plot_reward2(i)
 
             # solve mdp wrt current reward
@@ -67,22 +62,17 @@ class DME:
             t2 = time.time()
             print('Duration-- back: {0}, forward: {1}'.format(t1-t0, t2-t1))
 
-            # calculate loss and euler distance to [0,0, ..., 0] which we want loss to be
-            # loss = self.irl_agent.emp_fc - self.irl_agent.exp_fc()  # FAULTY exp_fc calculation
-            diff = self.irl_agent.emp_fc - self.irl_agent.esvc
-            dist = np.power(diff, 2) * 1e5
-
-            lr = np.maximum(lr - decay, 1e-10)
-            self.irl_agent.rew_nn.backprop_diff(dist, state_array, self.irl_agent.state_rewards, lr, momentum=0.75)
+            loss = funct.mse_loss(torch.from_numpy(self.irl_agent.emp_fc), torch.from_numpy(self.irl_agent.esvc)) * 1e5
+            loss.backward()
+            optimizer.step()
 
             # self.losses[i] = dist
-            self.cumulative_dists[i] = np.sum(dist)
-            print("Distance:" + str(self.cumulative_dists[i])+"\n")
-            self.plot_cumulative_dists(i)
+            self.losses[i] = torch.sum(loss)
+            print("Distance:" + str(self.losses[i])+"\n")
+            self.plot_losses(i)
 
     def plot_reward(self, nof_iter):
-        dim = int(np.sqrt(len(self.irl_agent.env.state_list)))
-        data = np.reshape(self.irl_agent.state_rewards, (dim, dim))
+        data = self.irl_agent.state_rewards.view(40, 40)
 
         hm = sb.heatmap(data)
         fig = hm.get_figure()
@@ -128,9 +118,9 @@ class DME:
         fig.savefig(self.reward_path + 'delta_' + str(i) + '.png')
         fig.clf()
 
-    def plot_cumulative_dists(self, i):
-        plt.plot(range(i), self.cumulative_dists[:i])
-        plt.savefig(self.loss_path + str(i) + '.png')
+    def plot_losses(self, i):
+        plt.plot(range(i), self.losses[:i])
+        plt.savefig(self.loss_path + 'loss.png')
         plt.clf()
 
     # testing value iteration algorithm of the agent

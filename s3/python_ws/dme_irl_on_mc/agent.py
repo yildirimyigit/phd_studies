@@ -5,8 +5,10 @@
   [2]: Wulfmeier 2016, Maximum Entropy Deep Inverse Reinforcement Learning
 """
 import numpy as np
+import torch
 from env import IRLMDP
-from neural_network import MyNN, sigm, tanh
+# from neural_network import MyNN, relu, tanh
+from nn import NN
 
 import sys
 import seaborn as sb
@@ -18,7 +20,7 @@ class IRLAgent:
     def __init__(self):
         self.env = IRLMDP()
         # initializes nn with random weights
-        self.rew_nn = MyNN(nn_arch=(2, 64, 64, 1), acts=[sigm, sigm, tanh])
+        self.nn = NN(nn_arch=[2, 16, 16, 1]).double()
         self.state_rewards = np.empty(len(self.env.states), dtype=float)
 
         # self.state_id = self.env.start_id
@@ -44,93 +46,34 @@ class IRLAgent:
         self.emp_fc = np.zeros(len(self.env.states))
         self.calculate_emp_fc()
 
-    ###############################################
-    # [1]
-    def backward_pass(self):
-        # print("+ IRLAgent.backward_pass")
-
-        self.v[:] = -sys.float_info.max
-
-        for i in range(self.vi_loop-1):
-            self.v[self.env.goal_id, i] = 0
-
-            for s in range(len(self.env.states)):
-                if s == self.env.goal_id:
-                    continue
-                state_reward = self.state_rewards[s]
-                for a in range(len(self.env.actions)):
-                    self.q[s][a] = state_reward + np.matmul(self.env.transition[s][a], self.v[:, i])
-
-            # v  = softmax_a Q
-            q = np.exp(self.q)
-            max_q = np.max(q, axis=1)   # max of each row: max q value over actions for each state
-            nonzero_ids = np.where(max_q != 0)
-            self.v[nonzero_ids, i+1] = max_q[nonzero_ids] / np.sum(q[nonzero_ids], axis=1)
-
-            print('\rBackward Pass: {}'.format((i+1)), end='')
-        print('')
-
-        # self.plot_policy()
-        # print("\n- IRLAgent.backward_pass")
+        self.normalized_states = self.mc_normalized_states()
 
     ###############################################
     # [1]: Calculates fast_policy using an approximate version of Value Iteration
     def fast_backward_pass(self):
         # print("+ IRLAgent.backward_pass")
 
-        v = np.ones((len(self.env.states), 1)) * -sys.float_info.max
-        q = np.zeros((len(self.env.states), len(self.env.actions)))
+        v = torch.ones((len(self.env.states), 1)) * -sys.float_info.max
+        q = torch.zeros((len(self.env.states), len(self.env.actions)))
 
         for i in range(self.vi_loop-1):
             v[self.env.goal_id] = 0
             for s in range(len(self.env.states)):
-                q[s, :] = np.matmul(self.env.transition[s, :, :], v).T + self.state_rewards[s]
+                q[s, :] = torch.matmul(torch.from_numpy(self.env.transition[s, :, :]), v.double()).T
+                q[s, :] += self.state_rewards[s]
 
             # v = softmax_a q
             # one problem:
             # when np.sum(np.exp(q), axis=1) = 0, division by 0. In this case v = 0
-            expq = np.exp(q)
-            sumexpq = np.sum(expq, axis=1)
-            nonzero_ids = np.where(sumexpq != 0)
+            expq = torch.exp(q)
+            sumexpq = torch.sum(expq, axis=1)
+            nonzero_ids = torch.where(sumexpq != 0)
             zero_ids = np.where(sumexpq == 0)
             v[nonzero_ids, 0] = np.exp(np.max(q[nonzero_ids], axis=1))/sumexpq[nonzero_ids]
             v[zero_ids, 0] = -sys.float_info.max
 
             print('\rBackward Pass: {}'.format((i+1)), end='')
         print('')
-        v[self.env.goal_id] = 0
-        # current MaxEnt policy:
-        self.advantage = q - np.reshape(v, (len(self.env.states), 1))
-        self.fast_policy = np.exp(self.advantage)
-
-        # self.plot_policy()
-        # print("\n- IRLAgent.backward_pass")
-
-    ##############################################################################################
-    # [1]: Calculates fast_policy using an approximate version of Value Iteration algorithm
-    def ffast_backward_pass(self):
-        # print("+ IRLAgent.backward_pass")
-
-        v = np.ones((len(self.env.states), 1)) * -sys.float_info.max
-
-        for i in range(self.vi_loop-1):
-            v[self.env.goal_id] = 0
-            q = [(np.matmul(self.env.transition[s, :, :], v).T + self.state_rewards[s])[0]
-                 for s in range(len(self.env.states))]
-
-            # q = np.reshape(tq, (len(self.env.states), len(self.env.actions)))
-            # v = softmax_a q
-            # one problem:
-            # when np.sum(np.exp(q), axis=1) = 0, division by 0. In this case v = 0
-            expq = np.exp(q)
-            sumexpq = np.sum(expq, axis=1)
-            nonzero_ids = np.where(sumexpq != 0)
-            zero_ids = np.where(sumexpq == 0)
-            v[nonzero_ids, 0] = np.exp(np.max(np.array(q)[nonzero_ids], axis=1))/sumexpq[nonzero_ids]
-            v[zero_ids, 0] = -sys.float_info.max
-
-            print('\rBackward Pass: {}'.format((i+1)), end='')
-
         v[self.env.goal_id] = 0
         # current MaxEnt policy:
         self.advantage = q - np.reshape(v, (len(self.env.states), 1))
@@ -151,38 +94,6 @@ class IRLAgent:
     ###############################################
     # [1]
     # Simulates the propagation of the policy
-    def forward_pass(self):  # esvc: expected state visitation count
-        # print("+ IRLAgent.forward_pass")
-
-        # #######################################################################
-        # create the directory to be used for plotting
-        # since forward will be called on multiple times, I use system time here
-        path = self.env.path + 'figures/forward_pass/' + str(int(time.time()))
-        os.makedirs(path)
-        # #######################################################################
-
-        self.esvc_mat[:] = 0
-        self.esvc_mat[self.env.start_id, :] = 1
-        # for loop_ctr in range(10):
-        for loop_ctr in range(self.vi_loop-1):
-            self.esvc_mat[self.env.goal_id][loop_ctr] = 0
-            esvc_unnorm = np.zeros(len(self.env.states))
-            for j in range(len(self.env.states)):
-                esvc_unnorm[j] = self.calc_esvc_unnorm(j, loop_ctr)
-
-            # normalization to calculate the frequencies
-            self.esvc_mat[:, loop_ctr + 1] = esvc_unnorm/sum(esvc_unnorm)
-            print('\rForward Pass: {}'.format((loop_ctr+1)), end='')
-            self.plot_esvc_mat(path, loop_ctr)
-        self.esvc = np.sum(self.esvc_mat, axis=1)
-        self.plot_esvc(path, 'esvc', self.esvc)
-        print('')
-        # print("\n- IRLAgent.forward_pass")
-
-    ###############################################
-
-    ###############################################
-    # [1]
     def fast_forward_pass(self):  # esvc: expected state visitation count
         # print("+ IRLAgent.forward_pass")
 
@@ -214,28 +125,6 @@ class IRLAgent:
 
     ###############################################
 
-    # calculation of the unnormalized esvc for state 'index'
-    def calc_esvc_unnorm(self, index, loop_ctr):
-        sum_esvc = 0
-        for i in range(len(self.env.states)):
-            for j in range(len(self.env.actions)):
-                sum_esvc += self.env.transition[i][j][index] * self.policy(i, j) * self.esvc_mat[i, loop_ctr]
-        return sum_esvc
-
-    ###############################################
-
-    # calculation of the unnormalized esvc for state 'index'
-    def fast_calc_esvc_unnorm(self, loop_ctr):
-        esvc = np.zeros((len(self.env.states), len(self.env.states)))
-
-        for i in range(len(self.env.states)):
-            esvc[:, i] = np.matmul(self.env.transition[i][:][:].T, self.fast_policy[i][:].T) \
-                         * self.esvc_mat[i][loop_ctr]
-
-        return np.sum(esvc, axis=1)
-
-    ###############################################
-
     def ffast_calc_esvc_unnorm(self):
         # esvc = map(self.esvcind, range(len(self.env.states)))
         esvc = [self.esvcind(i) for i in range(len(self.env.states))]
@@ -262,9 +151,11 @@ class IRLAgent:
         self.emp_fc = cumulative_emp_fc
         self.plot_emp_fc('empfc')
 
-    # def exp_fc(self):   # expected feature counts
-    #     # return np.matmul(self.esvc.T, self.env.state_list)
-    #     return self.esvc
+    def get_rewards(self):
+        states, ids = self.get_states()  # states are shuffled, ids contains the order
+        self.nn.zero_grad()
+        out = self.nn(states.view(-1, 2))
+        return out, ids
 
     def policy(self, sid, aid):
         return np.exp(self.q[sid][aid] - self.v[sid, -1])   # last column in the v matrix
@@ -272,11 +163,16 @@ class IRLAgent:
     def set_current_policy(self):
         self.current_policy = np.exp(self.q - np.reshape(self.v[:, -1], (len(self.env.states), 1)))
 
-    def reward(self, state):
-        return self.rew_nn.forward(np.asarray([state.x, state.v]))
+    # def reward(self, state):
+    #     return self.rew_nn.forward(np.asarray([state.x, state.v]))
+    #
+    # def reward_batch(self):
+    #     return self.rew_nn.forward_batch(np.asarray(self.mc_normalized_states()))
 
-    def reward_batch(self):
-        return self.rew_nn.forward_batch(np.asarray(self.mc_normalized_states()))
+    def get_states(self):
+        indices = np.array(range(len(self.normalized_states)))
+        np.random.shuffle(indices)
+        return torch.from_numpy(np.array(self.normalized_states)[indices]), indices
 
     def mc_normalized_states(self):
         normalized_states = np.asarray(self.env.state_list)

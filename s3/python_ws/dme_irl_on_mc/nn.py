@@ -23,7 +23,7 @@ class NN(nn.Module):
     def forward(self, x):
         x = funct.relu(self.fc1(x))
         x = funct.relu(self.fc2(x))
-        x = funct.tanh(self.fc3(x))
+        x = torch.tanh(self.fc3(x))
 
         return x
 
