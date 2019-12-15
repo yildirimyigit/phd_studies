@@ -55,11 +55,14 @@ class IRLAgent:
 
         v = torch.ones((len(self.env.states), 1)) * -sys.float_info.max
         q = torch.zeros((len(self.env.states), len(self.env.actions)))
+        v = v.double()
+        q = q.double()
 
         for i in range(self.vi_loop-1):
             v[self.env.goal_id] = 0
             for s in range(len(self.env.states)):
-                q[s, :] = torch.matmul(torch.from_numpy(self.env.transition[s, :, :]), v.double()).T
+                q[s, :] = torch.matmul(torch.from_numpy(self.env.transition[s, :, :]), v).T
+                q[s, torch.where(torch.isnan(q[s, :]))[0]] = -float('inf')
                 q[s, :] += self.state_rewards[s]
 
             # v = softmax_a q
