@@ -53,7 +53,7 @@ class IRLAgent:
     def fast_backward_pass(self):
         # print("+ IRLAgent.backward_pass")
 
-        v = torch.ones((len(self.env.states), 1)) * -sys.float_info.max
+        v = torch.ones((len(self.env.states), 1)) * -1e30
         q = torch.zeros((len(self.env.states), len(self.env.actions)))
         v = v.double()
         q = q.double()
@@ -61,26 +61,24 @@ class IRLAgent:
         for i in range(self.vi_loop-1):
             v[self.env.goal_id] = 0
             for s in range(len(self.env.states)):
-                q[s, :] = torch.matmul(torch.from_numpy(self.env.transition[s, :, :]), v).T
-                q[s, torch.where(torch.isnan(q[s, :]))[0]] = -float('inf')
-                q[s, :] += self.state_rewards[s]
+                q[s, :] = torch.matmul(self.env.transition[s, :, :], v).T + self.state_rewards[s]
 
             # v = softmax_a q
             # one problem:
             # when np.sum(np.exp(q), axis=1) = 0, division by 0. In this case v = 0
             expq = torch.exp(q)
             sumexpq = torch.sum(expq, axis=1)
-            nonzero_ids = torch.where(sumexpq != 0)
-            zero_ids = np.where(sumexpq == 0)
-            v[nonzero_ids, 0] = np.exp(np.max(q[nonzero_ids], axis=1))/sumexpq[nonzero_ids]
-            v[zero_ids, 0] = -sys.float_info.max
+            nonzero_ids = torch.where(sumexpq != 0)[0]
+            zero_ids = torch.where(sumexpq == 0)[0]
+            v[nonzero_ids, 0] = torch.exp(torch.max(q[nonzero_ids], axis=1)[0])/sumexpq[nonzero_ids]
+            v[zero_ids, 0] = -1e30
 
             print('\rBackward Pass: {}'.format((i+1)), end='')
         print('')
         v[self.env.goal_id] = 0
         # current MaxEnt policy:
-        self.advantage = q - np.reshape(v, (len(self.env.states), 1))
-        self.fast_policy = np.exp(self.advantage)
+        self.advantage = q - v.view(-1, 1)
+        self.fast_policy = torch.exp(self.advantage)
 
         # self.plot_policy()
         # print("\n- IRLAgent.backward_pass")
@@ -135,8 +133,9 @@ class IRLAgent:
         return np.sum(esvc, axis=0)
 
     def esvcind(self, ind):
-        return np.matmul(self.env.transition[ind][:][:].T, self.fast_policy[ind][:].T) \
-               * self.esvc_mat[ind][self.cur_loop_ctr]
+        propagation_prob = torch.matmul(self.env.transition[ind][:][:].T, self.fast_policy[ind][:].T)
+        esvc = propagation_prob * self.esvc_mat[ind][self.cur_loop_ctr]
+        return esvc
 
     ###############################################
 

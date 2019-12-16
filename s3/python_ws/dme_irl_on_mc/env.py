@@ -3,13 +3,15 @@
   @author: irmak.guzey@boun.edu.tr
 """
 import numpy as np
+import torch
 from utils import *
 
 
 class IRLMDP:
     def __init__(self, path='data/mccont_expert_trajs/'):
         self.path = path
-        self.states, self.actions, self.transition = self.create_env()
+        self.states, self.actions, tr = self.create_env()
+        self.transition = torch.from_numpy(tr)
         self.state_list = self.get_state_list()
         self.gamma = 0.9
         self.start_id = self.get_start_state()
