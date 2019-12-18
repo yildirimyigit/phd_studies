@@ -7,7 +7,6 @@
 
 import numpy as np
 import torch
-import torch.nn as nn
 import torch.nn.functional as funct
 import torch.optim as optim
 from agent import IRLAgent
@@ -37,26 +36,20 @@ class DME:
         # #######################################################################
 
     def run(self):
-        state_array = np.asarray(self.irl_agent.env.state_list)
-
         optimizer = optim.Adam(self.irl_agent.nn.parameters(), lr=0.001)
 
         for i in range(self.epochs):
             print('--- Iteration {0} ---'.format(i))
             # calculate state rewards
-            reward_tensor, state_ids = self.irl_agent.get_rewards()
-
-            self.irl_agent.state_rewards = reward_tensor  # TODO: to numpy
-            # self.save_reward0(i)
-            # self.irl_agent.state_rewards = np.interp(temp, (temp.min(), temp.max()), (-1, 1))  # temp * 100
+            self.irl_agent.state_rewards, state_ids = self.irl_agent.get_rewards()
+            ordered_rewards = self.irl_agent.order_rewards(state_ids)
 
             self.save_reward(i)
             # self.plot_reward(i)
-            # self.plot_reward2(i)
 
             # solve mdp wrt current reward
             t0 = time.time()
-            self.irl_agent.fast_backward_pass()
+            self.irl_agent.fast_backward_pass(ordered_rewards)
             t1 = time.time()
             self.irl_agent.fast_forward_pass()   # calculate irl.esvc to use it in calculation of irl.exp_fc
             t2 = time.time()
