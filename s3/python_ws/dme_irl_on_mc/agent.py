@@ -31,18 +31,18 @@ class IRLAgent:
         # Creating the output directory for the individual run
         os.makedirs(self.output_directory_path)
 
-        self.vi_loop = 1000
+        self.vi_loop = 3
         self.v = np.empty((len(self.env.states), self.vi_loop), dtype=float)
         self.q = np.empty((len(self.env.states), len(self.env.actions)), dtype=float)
         self.advantage = np.empty((len(self.env.states), len(self.env.actions)), dtype=float)
-        self.fast_policy = np.empty((len(self.env.states), len(self.env.actions)), dtype=float)
-        self.esvc = torch.empty(len(self.env.states), dtype=float)
-        self.esvc_mat = torch.empty((len(self.env.states), self.vi_loop), dtype=float)
+        self.fast_policy = torch.empty((len(self.env.states), len(self.env.actions))).double()
+        self.esvc = torch.empty(len(self.env.states)).double()
+        self.esvc_mat = torch.empty((len(self.env.states), self.vi_loop)).double()
 
         # to use in list compression
         self.cur_loop_ctr = 0
 
-        self.emp_fc = np.zeros(len(self.env.states))
+        self.emp_fc = torch.zeros(len(self.env.states))
         self.calculate_emp_fc()
 
         self.normalized_states = self.mc_normalized_states()
@@ -77,6 +77,10 @@ class IRLAgent:
         self.advantage = q - v.view(-1, 1)
         self.fast_policy = torch.exp(self.advantage)
 
+        for i in range(len(self.env.states)):
+            self.fast_policy[i][:] = self.fast_policy[i][:]/torch.sum(self.fast_policy[i][:])
+        self.fast_policy[self.env.goal_id][:] = 1
+
     ###############################################
     # [1]
     # Simulates the propagation of the policy
@@ -85,17 +89,11 @@ class IRLAgent:
 
         self.esvc_mat[:] = 0
         self.esvc_mat[self.env.start_id, :] = 1
-        # for i in range(10):
         for loop_ctr in range(self.vi_loop-1):  # type: int
             self.cur_loop_ctr = loop_ctr
             self.esvc_mat[self.env.goal_id][loop_ctr] = 0
-            # esvc_unnorm = self.fast_calc_esvc_unnorm(loop_ctr)
-            esvc_unnorm = self.ffast_calc_esvc_unnorm()
-
-            # normalization to calculate the frequencies.
-            self.esvc_mat[:, loop_ctr + 1] = esvc_unnorm/sum(esvc_unnorm)
+            self.esvc_mat[:, loop_ctr + 1] = self.ffast_calc_esvc_unnorm()
             print('\rForward Pass: {}'.format((loop_ctr+1)), end='')
-            # self.plot_esvc_mat(path, loop_ctr)
         print('')
         self.esvc = torch.sum(self.esvc_mat, dim=1)/self.vi_loop  # averaging over <self.vi_loop> many examples
         # self.plot_esvc(path, 'esvc', self.esvc)
@@ -111,8 +109,8 @@ class IRLAgent:
         return np.sum(esvc, axis=0)
 
     def esvcind(self, ind):
-        propagation_prob = torch.matmul(self.env.transition[ind][:][:].T, self.fast_policy[ind][:].T)
-        esvc = propagation_prob * self.esvc_mat[ind][self.cur_loop_ctr]
+        transition_prob_wrt_pol = torch.matmul(self.env.transition[ind][:][:].T, self.fast_policy[ind][:].T)
+        esvc = transition_prob_wrt_pol * self.esvc_mat[ind][self.cur_loop_ctr]  # prob * accummulated svc
         return esvc
 
     ###############################################
@@ -128,8 +126,8 @@ class IRLAgent:
             cumulative_emp_fc += current_trajectory_emp_fc
 
         cumulative_emp_fc /= len(trajectories)  # normalization over all trajectories
-        self.emp_fc = cumulative_emp_fc
-        self.plot_emp_fc('empfc')
+        self.emp_fc = torch.from_numpy(cumulative_emp_fc)
+        # self.plot_emp_fc('empfc')
 
     def get_rewards(self):
         states, ids = self.get_states()  # states are shuffled, ids contains the order

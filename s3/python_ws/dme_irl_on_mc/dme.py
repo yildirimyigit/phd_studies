@@ -32,10 +32,11 @@ class DME:
         os.makedirs(self.reward_path)
         # #######################################################################
         self.rewards_file = open(self.reward_path + 'rewards.txt', "a+")
-        self.rewards_file0 = open(self.reward_path + 'rewards0.txt', "a+")
+        # self.rewards_file0 = open(self.reward_path + 'rewards0.txt', "a+")
         # #######################################################################
 
     def run(self):
+        torch.autograd.set_detect_anomaly(True)
         optimizer = optim.Adam(self.irl_agent.nn.parameters(), lr=0.001)
 
         for i in range(self.epochs):
@@ -55,7 +56,7 @@ class DME:
             t2 = time.time()
             print('Duration-- back: {0}, forward: {1}'.format(t1-t0, t2-t1))
 
-            loss = funct.mse_loss(torch.from_numpy(self.irl_agent.emp_fc), torch.from_numpy(self.irl_agent.esvc)) * 1e5
+            loss = funct.mse_loss(self.irl_agent.emp_fc, self.irl_agent.esvc)  # * 1e9
             loss.backward()
             optimizer.step()
 
