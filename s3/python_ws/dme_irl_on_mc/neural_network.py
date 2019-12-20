@@ -172,7 +172,7 @@ class MyNN:
         return total_error
 
     def backprop_diff(self, diff, x, y_hat, lr=0.15, momentum=0.5):
-        diff = np.reshape(diff, np.shape(y_hat))
+        # diff = np.reshape(diff, np.shape(y_hat))
         batch_size = len(x)
         deltas = []
         for i in reversed(range(self.nof_layers-1)):

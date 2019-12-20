@@ -6,7 +6,7 @@
 """
 import numpy as np
 from env import IRLMDP
-from neural_network import MyNN, sigm, tanh
+from neural_network import MyNN, sigm, linear, relu
 
 import sys
 import seaborn as sb
@@ -18,7 +18,7 @@ class IRLAgent:
     def __init__(self):
         self.env = IRLMDP()
         # initializes nn with random weights
-        self.rew_nn = MyNN(nn_arch=(2, 64, 64, 1), acts=[sigm, sigm, tanh])
+        self.rew_nn = MyNN(nn_arch=(2, 24, 24, 1), acts=[sigm, sigm, linear])
         self.state_rewards = np.empty(len(self.env.states), dtype=float)
 
         # self.state_id = self.env.start_id
@@ -29,7 +29,7 @@ class IRLAgent:
         # Creating the output directory for the individual run
         os.makedirs(self.output_directory_path)
 
-        self.vi_loop = 1000
+        self.vi_loop = 200
         self.v = np.empty((len(self.env.states), self.vi_loop), dtype=float)
         self.q = np.empty((len(self.env.states), len(self.env.actions)), dtype=float)
         self.advantage = np.empty((len(self.env.states), len(self.env.actions)), dtype=float)
@@ -101,8 +101,10 @@ class IRLAgent:
         v[self.env.goal_id] = 0
         # current MaxEnt policy:
         self.advantage = q - np.reshape(v, (len(self.env.states), 1))
-        self.fast_policy = np.exp(self.advantage)
+        temp_policy = np.exp(self.advantage)
 
+        self.fast_policy = np.array([temp_policy[i]/np.sum(temp_policy[i]) for i in range(len(temp_policy))])
+        self.fast_policy[self.env.goal_id] = 0
         # self.plot_policy()
         # print("\n- IRLAgent.backward_pass")
 
@@ -200,10 +202,8 @@ class IRLAgent:
             self.cur_loop_ctr = loop_ctr
             self.esvc_mat[self.env.goal_id][loop_ctr] = 0
             # esvc_unnorm = self.fast_calc_esvc_unnorm(loop_ctr)
-            esvc_unnorm = self.ffast_calc_esvc_unnorm()
+            self.esvc_mat[:, loop_ctr + 1] = self.ffast_calc_esvc_unnorm()
 
-            # normalization to calculate the frequencies.
-            self.esvc_mat[:, loop_ctr + 1] = esvc_unnorm/sum(esvc_unnorm)
             print('\rForward Pass: {}'.format((loop_ctr+1)), end='')
             # self.plot_esvc_mat(path, loop_ctr)
         print('')
