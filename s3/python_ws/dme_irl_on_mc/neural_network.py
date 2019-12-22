@@ -112,8 +112,8 @@ class MyNN:
 
         layer = x
         for i in range(self.nof_layers - 1):
-            b = np.ones(layer.ndim)
-            layer = np.append(layer, b)
+            b = np.ones((len(layer), 1))
+            layer = np.hstack((layer, b))
             layer = np.dot(layer, self.weights[i])
 
             self.layer_inputs.append(layer)
@@ -171,8 +171,9 @@ class MyNN:
 
         return total_error
 
-    def backprop_diff(self, diff, x, y_hat, lr=0.15, momentum=0.5):
-        # diff = np.reshape(diff, np.shape(y_hat))
+    def backprop_diff(self, diff, x, y_hat, lr=0.1, momentum=0.9):
+        """ diff: error that is calculated outside"""
+        diff = np.reshape(diff, np.shape(y_hat))
         batch_size = len(x)
         deltas = []
         for i in reversed(range(self.nof_layers-1)):
@@ -215,17 +216,6 @@ class MyNN:
 if __name__ == "__main__":
     neu = MyNN(nn_arch=(1, 32, 32, 1), acts=[gaussian, sigm, tanh, linear])
 
-    # x = np.array([[0.3752], [-0.2676], [-0.4988], [0.2868], [-0.207], [-0.3173], [0.1603], [0.1371], [0.2306],
-    #               [0.334], [-0.122], [-0.164], [-0.0729], [-0.1599], [-0.3263], [-0.4928], [0.1322], [-0.4274],
-    #               [-0.4204], [-0.2605], [-0.4703], [-0.0064], [-0.2161], [-0.295], [0.4297]])
-    # y = np.array([[0.6882], [-0.8828], [-0.2575], [0.7377], [-0.8138], [-0.8753], [0.8192], [0.587], [0.9892],
-    #               [0.9435], [-0.7644], [-0.6966], [-0.4353], [-0.7933], [-1.1323], [-0.2743], [0.7103], [-0.474],
-    #               [-0.518], [-0.9765], [-0.2826], [-0.0546], [-0.9704], [-1.0277], [0.5678]])
-
-    # x = np.linspace(-2 * np.pi, 2 * np.pi, 1000)[:, None]
-    # y = np.sin(x) + 0.05 * np.random.normal(size=[len(x), 1])
-    # x = x / (4 * np.pi) + 0.5
-
     x = np.linspace(0, 1, 1000)[:, None]
     y = 0.2 + 0.4*x**2 + 0.3*x*np.sin(15*x) + 0.05*np.cos(50*x)
 
@@ -261,19 +251,4 @@ if __name__ == "__main__":
     c2, = plt.plot(x, y_hat, c='r')
     plt.legend([c1, c2], ['Base Values', 'Learned Function'], loc=2)
     plt.show()
-
-    # x = np.linspace(-6, 6, 300)
-    # y = np.linspace(-6, 6, 300)
-    #
-    # X, Y = np.meshgrid(x, y)
-    # Z = f(X, Y)
-    # X /= 6
-    # Y /= 6
-    # fig = plt.figure()
-    # ax = plt.axes(projection='3d')
-    # ax.contour3D(X, Y, Z, 50, cmap='binary')
-    # ax.set_xlabel('x')
-    # ax.set_ylabel('y')
-    # ax.set_zlabel('z')
-    # plt.show()
 

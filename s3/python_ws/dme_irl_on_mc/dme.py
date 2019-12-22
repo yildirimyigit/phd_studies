@@ -31,7 +31,7 @@ class DME:
         os.makedirs(self.loss_path)
         # #######################################################################
         self.rewards_file = open(self.reward_path + 'rewards.txt', "a+")
-        self.rewards_file0 = open(self.reward_path + 'rewards0.txt', "a+")
+        # self.rewards_file0 = open(self.reward_path + 'rewards0.txt', "a+")
         # #######################################################################
 
     def run(self):
@@ -43,18 +43,8 @@ class DME:
         for i in range(self.iter_count):
             print('--- Iteration {0} ---'.format(i))
             # calculate state rewards
-            temp = self.irl_agent.reward_batch()
+            self.irl_agent.state_rewards = self.irl_agent.reward_batch()
 
-            # if i >= 1:
-            #     self.plot_reward_delta(self.irl_agent.state_rewards-temp, i)
-
-            self.irl_agent.state_rewards = temp
-            # self.save_reward0(i)
-            # self.irl_agent.state_rewards = np.interp(temp, (temp.min(), temp.max()), (-1, 1))  # temp * 100
-
-            # print('***Rewards')
-            # print(self.irl_agent.state_rewards)
-            # print('***Rewards')
             self.save_reward(i)
             self.plot_reward(i)
             # self.plot_reward2(i)
@@ -70,10 +60,10 @@ class DME:
             # calculate loss and euler distance to [0,0, ..., 0] which we want loss to be
             # loss = self.irl_agent.emp_fc - self.irl_agent.exp_fc()  # FAULTY exp_fc calculation
             diff = self.irl_agent.emp_fc - self.irl_agent.esvc
-            dist = np.sum(np.power(diff, 2))
+            dist = np.sum(np.power(diff, 2)) * 1e9
 
             lr = np.maximum(lr - decay, 1e-10)
-            self.irl_agent.rew_nn.backprop_diff(dist, state_array, self.irl_agent.state_rewards, lr, momentum=0.9)
+            self.irl_agent.rew_nn.backprop_diff(dist, state_array, self.irl_agent.state_rewards, lr)
 
             # self.losses[i] = dist
             self.cumulative_dists[i] = dist
