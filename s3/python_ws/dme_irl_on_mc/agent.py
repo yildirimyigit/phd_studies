@@ -274,7 +274,7 @@ class IRLAgent:
         # already shuffled random batch
         self.batch_ids = np.random.choice(len(self.state_rewards), self.batch_size, replace=False)
         rew_batch = self.rew_nn.forward_batch(self.normalized_states[self.batch_ids].tolist())
-        self.state_rewards[self.batch_ids] = rew_batch
+        self.state_rewards[self.batch_ids] = rew_batch[:, 0]
 
     def backpropagation_batch(self, dist, lr):
         self.rew_nn.backprop_diff(dist[self.batch_ids].tolist(), np.array(self.env.state_list)[self.batch_ids].tolist(),
