@@ -88,7 +88,6 @@ class IRLAgent:
 
         for i in range(self.vi_loop-1):
             v[self.env.goal_id] = 0
-            nan = self.test(v)
             for s in range(len(self.env.states)):
                 q[s, :] = np.matmul(self.env.transition[s, :, :], v).T + self.state_rewards[s]
 
@@ -318,10 +317,3 @@ class IRLAgent:
         fig = hm.get_figure()
         fig.savefig(path+'/Figure' + str(i) + '.png')
         fig.clf()
-
-    def test(self, v):
-        for s in range(len(self.env.states)):
-            if np.any(np.isnan(np.matmul(self.env.transition[s, :, :], v).T + self.state_rewards[s])):
-                print("\nTEST: " + str(s), flush=True)
-                return True
-        return False
