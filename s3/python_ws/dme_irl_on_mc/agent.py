@@ -6,7 +6,7 @@
 """
 import numpy as np
 from env import IRLMDP
-from neural_network import MyNN, sigm, tanh, gaussian
+from neural_network import MyNN, sigm, linear, gaussian
 
 import sys
 import seaborn as sb
@@ -18,10 +18,9 @@ class IRLAgent:
     def __init__(self):
         self.env = IRLMDP()
         # initializes nn with random weights
-        self.rew_nn = MyNN(nn_arch=(2, 24, 24, 1), acts=[gaussian, sigm, tanh])
+        self.rew_nn = MyNN(nn_arch=(2, 24, 24, 1), acts=[gaussian, sigm, linear])
         self.state_rewards = np.empty(len(self.env.states), dtype=float)
-
-        # self.state_id = self.env.start_id
+        self.initialize_rewards()
 
         # To output the results, the following are used
         self.output_directory_suffix = str(int(time.time()))
@@ -30,6 +29,7 @@ class IRLAgent:
         os.makedirs(self.output_directory_path)
 
         self.vi_loop = 200
+        self.normalized_states = np.empty(len(self.env.states))
         self.v = np.empty((len(self.env.states), self.vi_loop), dtype=float)
         self.q = np.empty((len(self.env.states), len(self.env.actions)), dtype=float)
         self.advantage = np.empty((len(self.env.states), len(self.env.actions)), dtype=float)
@@ -38,11 +38,16 @@ class IRLAgent:
         self.esvc = np.empty(len(self.env.states), dtype=float)
         self.esvc_mat = np.empty((len(self.env.states), self.vi_loop), dtype=float)
 
+        self.batch_size = 128
+        self.batch_ids = np.zeros(self.batch_size)
+
         # to use in list compression
         self.cur_loop_ctr = 0
 
         self.emp_fc = np.zeros(len(self.env.states))
         self.calculate_emp_fc()
+
+        self.mc_normalized_states()
 
     ###############################################
     # [1]
@@ -83,6 +88,7 @@ class IRLAgent:
 
         for i in range(self.vi_loop-1):
             v[self.env.goal_id] = 0
+            nan = self.test(v)
             for s in range(len(self.env.states)):
                 q[s, :] = np.matmul(self.env.transition[s, :, :], v).T + self.state_rewards[s]
 
@@ -104,7 +110,7 @@ class IRLAgent:
         temp_policy = np.exp(self.advantage)
 
         self.fast_policy = np.array([temp_policy[i]/np.sum(temp_policy[i]) for i in range(len(temp_policy))])
-        self.fast_policy[self.env.goal_id] = 0
+        self.fast_policy[self.env.goal_id] = 1
         # self.plot_policy()
         # print("\n- IRLAgent.backward_pass")
 
@@ -143,15 +149,6 @@ class IRLAgent:
 
     ###############################################
     # [1]
-    # def backward_pass_wo_transition_matrix(self):
-    #     self.v[:] = -np.inf
-    #     for i in range(self.vi_loop):
-    #         self.v[self.env.goal_id] = 0
-
-    ###############################################
-
-    ###############################################
-    # [1]
     # Simulates the propagation of the policy
     def forward_pass(self):  # esvc: expected state visitation count
         # print("+ IRLAgent.forward_pass")
@@ -180,8 +177,6 @@ class IRLAgent:
         self.plot_esvc(path, 'esvc', self.esvc)
         print('')
         # print("\n- IRLAgent.forward_pass")
-
-    ###############################################
 
     ###############################################
     # [1]
@@ -276,7 +271,17 @@ class IRLAgent:
         return self.rew_nn.forward(np.asarray([state.x, state.v]))
 
     def reward_batch(self):
-        return self.rew_nn.forward_batch(np.asarray(self.mc_normalized_states()))
+        # already shuffled random batch
+        self.batch_ids = np.random.choice(len(self.state_rewards), self.batch_size, replace=False)
+        rew_batch = self.rew_nn.forward_batch(self.normalized_states[self.batch_ids].tolist())
+        self.state_rewards[self.batch_ids] = rew_batch
+
+    def backpropagation_batch(self, dist, lr):
+        self.rew_nn.backprop_diff(dist[self.batch_ids].tolist(), np.array(self.env.state_list)[self.batch_ids].tolist(),
+                                  self.state_rewards[self.batch_ids], lr)
+
+    def initialize_rewards(self):
+        self.state_rewards = np.random.rand(len(self.state_rewards)) * 2 - 1
 
     def mc_normalized_states(self):
         normalized_states = np.asarray(self.env.state_list)
@@ -289,9 +294,7 @@ class IRLAgent:
         normalized_states -= [min0, min1]
         normalized_states /= [max0-min0, max1-min1]
 
-        a = normalized_states.tolist()
-
-        return a
+        self.normalized_states = normalized_states
 
     def plot_esvc(self, path, name, data):
         dim = int(np.sqrt(len(self.env.state_list)))
@@ -315,3 +318,10 @@ class IRLAgent:
         fig = hm.get_figure()
         fig.savefig(path+'/Figure' + str(i) + '.png')
         fig.clf()
+
+    def test(self, v):
+        for s in range(len(self.env.states)):
+            if np.any(np.isnan(np.matmul(self.env.transition[s, :, :], v).T + self.state_rewards[s])):
+                print("\nTEST: " + str(s), flush=True)
+                return True
+        return False

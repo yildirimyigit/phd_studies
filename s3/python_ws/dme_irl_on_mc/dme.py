@@ -35,7 +35,6 @@ class DME:
         # #######################################################################
 
     def run(self):
-        state_array = np.asarray(self.irl_agent.env.state_list)
 
         lr = 1e-3
         decay = 1e-7
@@ -43,7 +42,8 @@ class DME:
         for i in range(self.iter_count):
             print('--- Iteration {0} ---'.format(i))
             # calculate state rewards
-            self.irl_agent.state_rewards = self.irl_agent.reward_batch()
+
+            self.irl_agent.reward_batch()
 
             self.save_reward(i)
             self.plot_reward(i)
@@ -60,13 +60,12 @@ class DME:
             # calculate loss and euler distance to [0,0, ..., 0] which we want loss to be
             # loss = self.irl_agent.emp_fc - self.irl_agent.exp_fc()  # FAULTY exp_fc calculation
             diff = self.irl_agent.emp_fc - self.irl_agent.esvc
-            dist = np.sum(np.power(diff, 2)) * 1e9
+            dist = np.power(diff, 2)
 
             lr = np.maximum(lr - decay, 1e-10)
-            self.irl_agent.rew_nn.backprop_diff(dist, state_array, self.irl_agent.state_rewards, lr)
+            self.irl_agent.backpropagation_batch(dist, lr)
 
-            # self.losses[i] = dist
-            self.cumulative_dists[i] = dist
+            self.cumulative_dists[i] = np.sum(dist) * 1e6
             print("Distance:" + str(self.cumulative_dists[i])+"\n")
             self.plot_cumulative_dists(i)
 
