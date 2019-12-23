@@ -55,7 +55,7 @@ def linear(x, der=False):
     if not der:
         return x
     else:
-        return np.ones([len(x), 1])
+        return np.ones([1, len(x)])
 
 
 def gaussian(x, der=False):
@@ -173,12 +173,12 @@ class MyNN:
 
     def backprop_diff(self, diff, x, y_hat, lr=0.1, momentum=0.9):
         """ diff: error that is calculated outside"""
-        diff = np.reshape(diff, (len(y_hat), 1))
+        diff = np.reshape(diff, (1, len(y_hat)))
         batch_size = len(x)
         deltas = []
         for i in reversed(range(self.nof_layers-1)):
             if i == self.nof_layers - 2:  # output of the last layer
-                deltas.append(diff*self.activations[i](y_hat, der=True))  # diff of each instance in the batch
+                deltas.append((diff*self.activations[i](np.array(y_hat), der=True)).T)  # diff of each instance in the batch
                 # is multiplied by the corresponding derivative
             else:
                 last_delta = deltas[-1]

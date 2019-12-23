@@ -60,7 +60,8 @@ class DME:
             # calculate loss and euler distance to [0,0, ..., 0] which we want loss to be
             # loss = self.irl_agent.emp_fc - self.irl_agent.exp_fc()  # FAULTY exp_fc calculation
             diff = self.irl_agent.emp_fc - self.irl_agent.esvc
-            dist = np.power(diff, 2)
+            # dist = np.power(diff, 2)
+            dist = np.abs(diff)
 
             lr = np.maximum(lr - decay, 1e-10)
             self.irl_agent.backpropagation_batch(dist, lr)
