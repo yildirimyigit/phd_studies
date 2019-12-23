@@ -119,7 +119,7 @@ class DME:
 
     def plot_cumulative_dists(self, i):
         plt.plot(range(i), self.cumulative_dists[:i])
-        plt.savefig(self.loss_path + str(i) + '.png')
+        plt.savefig(self.loss_path + 'loss.png')
         plt.clf()
 
     # testing value iteration algorithm of the agent

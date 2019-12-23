@@ -101,7 +101,8 @@ class IRLAgent:
             v[nonzero_ids, 0] = np.exp(np.max(q[nonzero_ids], axis=1))/sumexpq[nonzero_ids]
             v[zero_ids, 0] = -sys.float_info.max
 
-            print('\rBackward Pass: {}'.format((i+1)), end='')
+            if i % 20 == 19:
+                print('\rBackward Pass: {}'.format((i+1)), end='')
         print('')
         v[self.env.goal_id] = 0
         # current MaxEnt policy:
@@ -198,7 +199,8 @@ class IRLAgent:
             # esvc_unnorm = self.fast_calc_esvc_unnorm(loop_ctr)
             self.esvc_mat[:, loop_ctr + 1] = self.ffast_calc_esvc_unnorm()
 
-            print('\rForward Pass: {}'.format((loop_ctr+1)), end='')
+            if loop_ctr % 20 == 19:
+                print('\rForward Pass: {}'.format((loop_ctr+1)), end='')
             # self.plot_esvc_mat(path, loop_ctr)
         print('')
         self.esvc = np.sum(self.esvc_mat, axis=1)/self.vi_loop  # averaging over <self.vi_loop> many examples
