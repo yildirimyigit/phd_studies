@@ -91,8 +91,8 @@ class MyNN:
             self.nof_layers = len(nn_arch)  # including the input layer
             self.weights = []
             for (l1, l2) in zip(nn_arch[:-1], nn_arch[1:]):
-                self.weights.append(np.random.uniform(high=0.01, size=(l1+1, l2)))  # +1 for augmenting bias
-                # self.weights.append(np.random.normal(scale=0.2, size=(l1 + 1, l2)))  # +1 for augmenting the bias
+                # self.weights.append(np.random.uniform(high=0.01, size=(l1+1, l2)))  # +1 for augmenting bias
+                self.weights.append(np.random.normal(scale=0.2, size=(l1 + 1, l2)))  # +1 for augmenting the bias
                 self.last_weight_deltas.append(np.zeros((l1+1, l2)))
 
         else:  # TODO: shape calculation missing for now
@@ -178,8 +178,8 @@ class MyNN:
         deltas = []
         for i in reversed(range(self.nof_layers-1)):
             if i == self.nof_layers - 2:  # output of the last layer
-                deltas.append((diff*self.activations[i](np.array(y_hat), der=True)).T)  # diff of each instance in the batch
-                # is multiplied by the corresponding derivative
+                deltas.append((diff*self.activations[i](np.array(y_hat), der=True)).T)
+                # diff of each instance in the batch is multiplied by the corresponding derivative
             else:
                 last_delta = deltas[-1]
                 delta_contributions = np.dot(last_delta, self.weights[i+1].T)

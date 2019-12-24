@@ -6,7 +6,7 @@
 """
 import numpy as np
 from env import IRLMDP
-from neural_network import MyNN, sigm, tanh, gaussian
+from neural_network import MyNN, sigm, linear, gaussian
 
 import sys
 import seaborn as sb
@@ -18,7 +18,7 @@ class IRLAgent:
     def __init__(self):
         self.env = IRLMDP()
         # initializes nn with random weights
-        self.rew_nn = MyNN(nn_arch=(2, 256, 256, 1), acts=[gaussian, sigm, tanh])
+        self.rew_nn = MyNN(nn_arch=(2, 256, 256, 1), acts=[gaussian, sigm, linear])
         self.state_rewards = np.empty(len(self.env.states), dtype=float)
         self.initialize_rewards()
 
@@ -172,7 +172,7 @@ class IRLAgent:
             # normalization to calculate the frequencies
             self.esvc_mat[:, loop_ctr + 1] = esvc_unnorm/sum(esvc_unnorm)
             print('\rForward Pass: {}'.format((loop_ctr+1)), end='')
-            self.plot_esvc_mat(path, loop_ctr)
+            self.plot_esvc_mat()
         self.esvc = np.sum(self.esvc_mat, axis=1)
         self.plot_esvc(path, 'esvc', self.esvc)
         print('')
@@ -295,7 +295,7 @@ class IRLAgent:
         normalized_states -= [min0, min1]
         normalized_states /= [max0-min0, max1-min1]
 
-        self.normalized_states = normalized_states
+        self.normalized_states = normalized_states * 2 - 1
 
     def plot_esvc(self, path, name, data):
         dim = int(np.sqrt(len(self.env.state_list)))
@@ -315,7 +315,11 @@ class IRLAgent:
         fig.clf()
 
     def plot_esvc_mat(self, path, i):
-        hm = sb.heatmap(self.esvc_mat)
+        dim = int(np.sqrt(len(self.env.state_list)))
+        hm = sb.heatmap(np.reshape(self.esvc_mat[:, -1], (dim, dim)).T)
+        hm.set_title('Expected State Visitation Counts')
+        hm.set_xlabel('x')
+        hm.set_ylabel('velocity')
         fig = hm.get_figure()
-        fig.savefig(path+'/Figure' + str(i) + '.png')
+        fig.savefig(path + "esvc_" + str(i) + '.png')
         fig.clf()

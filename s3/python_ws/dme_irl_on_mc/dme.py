@@ -26,17 +26,16 @@ class DME:
         # #######################################################################
         # create the directory to be used for plotting for rewards
         self.reward_path = self.irl_agent.output_directory_path + 'reward/'
-        self.loss_path = self.irl_agent.output_directory_path + 'loss/'
+        self.esvc_path = self.irl_agent.output_directory_path + 'esvc/'
         os.makedirs(self.reward_path)
-        os.makedirs(self.loss_path)
+        os.makedirs(self.esvc_path)
         # #######################################################################
         self.rewards_file = open(self.reward_path + 'rewards.txt', "a+")
-        # self.rewards_file0 = open(self.reward_path + 'rewards0.txt', "a+")
         # #######################################################################
 
     def run(self):
 
-        lr = 1e-3
+        lr = 1e-1
         decay = 1e-7
 
         for i in range(self.iter_count):
@@ -60,6 +59,7 @@ class DME:
             # calculate loss and euler distance to [0,0, ..., 0] which we want loss to be
             # loss = self.irl_agent.emp_fc - self.irl_agent.exp_fc()  # FAULTY exp_fc calculation
             diff = self.irl_agent.emp_fc - self.irl_agent.esvc
+            print("Diff sum: ", repr(np.sum(np.abs(diff))))
             dist = np.power(diff, 2)
 
             lr = np.maximum(lr - decay, 1e-10)
@@ -68,6 +68,7 @@ class DME:
             self.cumulative_dists[i] = np.sum(dist) * 1e6
             print("Distance:" + str(self.cumulative_dists[i])+"\n")
             self.plot_cumulative_dists(i)
+            self.irl_agent.plot_esvc_mat(self.esvc_path, i)
 
     def plot_reward(self, nof_iter):
         dim = int(np.sqrt(len(self.irl_agent.env.state_list)))
@@ -78,17 +79,17 @@ class DME:
         fig.savefig(self.reward_path + str(nof_iter) + '.png')
         fig.clf()
 
-    def save_reward0(self, nof_iter):
-        self.rewards_file0.write(str(nof_iter) + "\n")
-        self.rewards_file0.write("[")
-
-        for i, r in enumerate(self.irl_agent.state_rewards):
-            self.rewards_file0.write(str(r))
-            if i != len(self.irl_agent.state_rewards)-1:
-                self.rewards_file0.write(", ")
-
-        self.rewards_file0.write("] \n")
-        self.rewards_file0.flush()
+    # def save_reward0(self, nof_iter):
+    #     self.rewards_file0.write(str(nof_iter) + "\n")
+    #     self.rewards_file0.write("[")
+    #
+    #     for i, r in enumerate(self.irl_agent.state_rewards):
+    #         self.rewards_file0.write(str(r))
+    #         if i != len(self.irl_agent.state_rewards)-1:
+    #             self.rewards_file0.write(", ")
+    #
+    #     self.rewards_file0.write("] \n")
+    #     self.rewards_file0.flush()
 
     def save_reward(self, nof_iter):
         self.rewards_file.write(str(nof_iter) + "\n")
@@ -119,7 +120,7 @@ class DME:
 
     def plot_cumulative_dists(self, i):
         plt.plot(range(i), self.cumulative_dists[:i])
-        plt.savefig(self.loss_path + 'loss.png')
+        plt.savefig(self.irl_agent.output_directory_path + 'loss.png')
         plt.clf()
 
     # testing value iteration algorithm of the agent
