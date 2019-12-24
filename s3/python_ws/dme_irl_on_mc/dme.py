@@ -146,6 +146,10 @@ class DME:
         # draw_advantage(self.irl_agent.advantage)
 
 
+def kl_divergence(p, q):
+    return np.sum(np.where(p != 0, p * np.log(p / q), 0))
+
+
 def draw_advantage(p):
     td = np.max(p, axis=1)
     dim = int(np.sqrt(len(td)))
