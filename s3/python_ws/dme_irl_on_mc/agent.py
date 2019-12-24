@@ -12,6 +12,7 @@ import sys
 import seaborn as sb
 import os
 import time
+from tqdm import tqdm
 
 
 class IRLAgent:
@@ -56,7 +57,7 @@ class IRLAgent:
 
         self.v[:] = -sys.float_info.max
 
-        for i in range(self.vi_loop-1):
+        for i in tqdm(range(self.vi_loop-1)):
             self.v[self.env.goal_id, i] = 0
 
             for s in range(len(self.env.states)):
@@ -72,7 +73,6 @@ class IRLAgent:
             nonzero_ids = np.where(max_q != 0)
             self.v[nonzero_ids, i+1] = max_q[nonzero_ids] / np.sum(q[nonzero_ids], axis=1)
 
-            print('\rBackward Pass: {}'.format((i+1)), end='')
         print('')
 
         # self.plot_policy()
@@ -102,7 +102,8 @@ class IRLAgent:
             v[zero_ids, 0] = -sys.float_info.max
 
             if i % 20 == 19:
-                print('\rBackward Pass: {}'.format((i+1)), end='')
+                print('\rBackward Pass: {}'.format((i + 1)), end='')
+
         print('')
         v[self.env.goal_id] = 0
         # current MaxEnt policy:
@@ -163,7 +164,7 @@ class IRLAgent:
         self.esvc_mat[:] = 0
         self.esvc_mat[self.env.start_id, :] = 1
         # for loop_ctr in range(10):
-        for loop_ctr in range(self.vi_loop-1):
+        for loop_ctr in tqdm(range(self.vi_loop-1)):
             self.esvc_mat[self.env.goal_id][loop_ctr] = 0
             esvc_unnorm = np.zeros(len(self.env.states))
             for j in range(len(self.env.states)):
@@ -193,15 +194,15 @@ class IRLAgent:
         self.esvc_mat[:] = 0
         self.esvc_mat[self.env.start_id, :] = 1
         # for i in range(10):
-        for loop_ctr in range(self.vi_loop-1):  # type: int
+        for loop_ctr in range(self.vi_loop-1):
             self.cur_loop_ctr = loop_ctr
             self.esvc_mat[self.env.goal_id][loop_ctr] = 0
             # esvc_unnorm = self.fast_calc_esvc_unnorm(loop_ctr)
             self.esvc_mat[:, loop_ctr + 1] = self.ffast_calc_esvc_unnorm()
 
             if loop_ctr % 20 == 19:
-                print('\rForward Pass: {}'.format((loop_ctr+1)), end='')
-            # self.plot_esvc_mat(path, loop_ctr)
+                print('\rForward Pass: {}'.format((loop_ctr + 1)), end='')
+
         print('')
         self.esvc = np.sum(self.esvc_mat, axis=1)/self.vi_loop  # averaging over <self.vi_loop> many examples
         # self.plot_esvc(path, 'esvc', self.esvc)

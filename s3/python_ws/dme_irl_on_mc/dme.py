@@ -31,6 +31,7 @@ class DME:
         os.makedirs(self.esvc_path)
         # #######################################################################
         self.rewards_file = open(self.reward_path + 'rewards.txt', "a+")
+        self.esvc_file = open(self.esvc_path + 'esvc.txt', "a+")
         # #######################################################################
 
     def run(self):
@@ -69,6 +70,7 @@ class DME:
             print("Distance:" + str(self.cumulative_dists[i])+"\n")
             self.plot_cumulative_dists(i)
             self.irl_agent.plot_esvc_mat(self.esvc_path, i)
+            self.save_esvc(i)
 
     def plot_reward(self, nof_iter):
         dim = int(np.sqrt(len(self.irl_agent.env.state_list)))
@@ -102,6 +104,18 @@ class DME:
 
         self.rewards_file.write("] \n")
         self.rewards_file.flush()
+
+    def save_esvc(self, nof_iter):
+        self.esvc_file.write(str(nof_iter) + "\n")
+        self.esvc_file.write("[")
+
+        for i, r in enumerate(self.irl_agent.esvc_mat[:, -1]):
+            self.esvc_file.write(str(r))
+            if i != len(self.irl_agent.esvc_mat[:, -1]) - 1:
+                self.esvc_file.write(", ")
+
+        self.esvc_file.write("] \n")
+        self.esvc_file.flush()
 
     def plot_reward2(self, nof_iter):
         # plt.ylim(-0.2, 0.2)
