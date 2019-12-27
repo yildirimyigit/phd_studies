@@ -19,7 +19,7 @@ class IRLAgent:
     def __init__(self):
         self.env = IRLMDP()
         # initializes nn with random weights
-        self.rew_nn = MyNN(nn_arch=(2, 256, 256, 1), acts=[gaussian, sigm, linear])
+        self.rew_nn = MyNN(nn_arch=(2, 128, 128, 1), acts=[gaussian, sigm, linear])
         self.state_rewards = np.empty(len(self.env.states), dtype=float)
         self.initialize_rewards()
 
@@ -29,7 +29,7 @@ class IRLAgent:
         # Creating the output directory for the individual run
         os.makedirs(self.output_directory_path)
 
-        self.vi_loop = 200
+        self.vi_loop = 100
         self.normalized_states = np.empty(len(self.env.states))
         self.v = np.empty((len(self.env.states), self.vi_loop), dtype=float)
         self.q = np.empty((len(self.env.states), len(self.env.actions)), dtype=float)
@@ -79,14 +79,14 @@ class IRLAgent:
         # print("\n- IRLAgent.backward_pass")
 
     ###############################################
-    # [1]: Calculates fast_policy using an approximate version of Value Iteration
+    # [1]: Calculates the policy using an approximate version of Value Iteration
     def fast_backward_pass(self):
         # print("+ IRLAgent.backward_pass")
 
         v = np.ones((len(self.env.states), 1)) * -sys.float_info.max
         q = np.zeros((len(self.env.states), len(self.env.actions)))
 
-        for i in range(self.vi_loop-1):
+        for i in range(self.vi_loop*2-1):
             v[self.env.goal_id] = 0
             for s in range(len(self.env.states)):
                 q[s, :] = np.matmul(self.env.transition[s, :, :], v).T + self.state_rewards[s]
@@ -111,7 +111,7 @@ class IRLAgent:
         temp_policy = np.exp(self.advantage)
 
         self.fast_policy = np.array([temp_policy[i]/np.sum(temp_policy[i]) for i in range(len(temp_policy))])
-        self.fast_policy[self.env.goal_id] = 1
+        self.fast_policy[self.env.goal_id] = 0
         # self.plot_policy()
         # print("\n- IRLAgent.backward_pass")
 
@@ -184,20 +184,11 @@ class IRLAgent:
     def fast_forward_pass(self):  # esvc: expected state visitation count
         # print("+ IRLAgent.forward_pass")
 
-        # #######################################################################
-        # create the directory to be used for plotting
-        # since forward will be called on multiple times, I use system time here
-        # path = self.env.path + 'figures/forward_pass/' + str(int(time.time()))
-        # os.makedirs(path)
-        # #######################################################################
-
         self.esvc_mat[:] = 0
         self.esvc_mat[self.env.start_id, :] = 1
-        # for i in range(10):
         for loop_ctr in range(self.vi_loop-1):
             self.cur_loop_ctr = loop_ctr
             self.esvc_mat[self.env.goal_id][loop_ctr] = 0
-            # esvc_unnorm = self.fast_calc_esvc_unnorm(loop_ctr)
             self.esvc_mat[:, loop_ctr + 1] = self.ffast_calc_esvc_unnorm()
 
             if loop_ctr % 20 == 19:
@@ -205,8 +196,8 @@ class IRLAgent:
 
         print('')
         self.esvc = np.sum(self.esvc_mat, axis=1)/self.vi_loop  # averaging over <self.vi_loop> many examples
+        # self.esvc = self.esvc_mat[:, -1]
         # self.plot_esvc(path, 'esvc', self.esvc)
-        # print('')
         # print("\n- IRLAgent.forward_pass")
 
     ###############################################
@@ -234,14 +225,13 @@ class IRLAgent:
     ###############################################
 
     def ffast_calc_esvc_unnorm(self):
-        # esvc = map(self.esvcind, range(len(self.env.states)))
         esvc = [self.esvcind(i) for i in range(len(self.env.states))]
 
-        return np.sum(esvc, axis=0)
+        return esvc
 
     def esvcind(self, ind):
-        return np.matmul(self.env.transition[ind][:][:].T, self.fast_policy[ind][:].T) \
-               * self.esvc_mat[ind][self.cur_loop_ctr]
+        ret = np.matmul((self.env.transition[:, :, ind] * self.fast_policy).T, self.esvc_mat[:, self.cur_loop_ctr])
+        return np.sum(ret)
 
     ###############################################
 
