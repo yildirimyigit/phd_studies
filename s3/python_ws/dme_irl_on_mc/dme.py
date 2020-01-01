@@ -32,12 +32,13 @@ class DME:
         # #######################################################################
         self.rewards_file = open(self.reward_path + 'rewards.txt', "a+")
         self.esvc_file = open(self.esvc_path + 'esvc.txt', "a+")
+        self.policy_file = open(self.irl_agent.output_directory_path + 'policy.txt', "a+")
         # #######################################################################
 
     def run(self):
 
-        lr = 1e-1
-        decay = 1e-7
+        lr = 1e-3
+        decay = 1e-8
 
         for i in range(self.iter_count):
             print('--- Iteration {0} ---'.format(i))
@@ -51,11 +52,13 @@ class DME:
 
             # solve mdp wrt current reward
             t0 = time.time()
-            self.irl_agent.fast_backward_pass()
+            self.irl_agent.fast_backward_pass(i)
             t1 = time.time()
             self.irl_agent.fast_forward_pass()   # calculate irl.esvc to use it in calculation of irl.exp_fc
             t2 = time.time()
             print('Duration-- back: {0}, forward: {1}'.format(t1-t0, t2-t1))
+
+            # self.save_policy(i)
 
             # calculate loss and euler distance to [0,0, ..., 0] which we want loss to be
             # loss = self.irl_agent.emp_fc - self.irl_agent.exp_fc()  # FAULTY exp_fc calculation
@@ -66,7 +69,7 @@ class DME:
             lr = np.maximum(lr - decay, 1e-10)
             self.irl_agent.backpropagation_batch(dist, lr)
 
-            self.cumulative_dists[i] = np.sum(dist) * 1e6
+            self.cumulative_dists[i] = np.sum(dist)
             print("Distance:" + str(self.cumulative_dists[i])+"\n")
             self.plot_cumulative_dists(i)
             self.irl_agent.plot_esvc_mat(self.esvc_path, i)
@@ -116,6 +119,23 @@ class DME:
 
         self.esvc_file.write("] \n")
         self.esvc_file.flush()
+
+    def save_policy(self, ind):
+        self.policy_file.write(str(ind) + "\n")
+        self.policy_file.write("[")
+
+        for i in range(len(self.irl_agent.env.states)):
+            self.policy_file.write("[")
+            for j in range(len(self.irl_agent.env.actions)):
+                self.policy_file.write(str(self.irl_agent.fast_policy[i, j]))
+                if j != len(self.irl_agent.env.actions) - 1:
+                    self.policy_file.write(", ")
+            self.policy_file.write("]")
+            if i != len(self.irl_agent.env.states) - 1:
+                self.policy_file.write(", ")
+
+        self.policy_file.write("] \n\n")
+        self.policy_file.flush()
 
     def plot_reward2(self, nof_iter):
         # plt.ylim(-0.2, 0.2)
