@@ -6,7 +6,7 @@
 """
 import numpy as np
 from env import IRLMDP
-from neural_network import MyNN, sigm, linear, relu
+from neural_network import MyNN, sigm, linear, relu, tanh
 
 import sys
 import seaborn as sb
@@ -18,7 +18,7 @@ class IRLAgent:
     def __init__(self):
         self.env = IRLMDP()
         # initializes nn with random weights
-        self.rew_nn = MyNN(nn_arch=(2, 128, 64, 32, 1), acts=[sigm, relu, sigm, linear])
+        self.rew_nn = MyNN(nn_arch=(2, 32, 64, 128, 128, 64, 32, 1), acts=[sigm, sigm, relu, tanh, sigm, sigm, linear])
         self.state_rewards = np.empty(len(self.env.states), dtype=float)
         self.initialize_rewards()
 
