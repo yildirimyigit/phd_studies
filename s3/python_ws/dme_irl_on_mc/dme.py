@@ -31,8 +31,8 @@ class DME:
         os.makedirs(self.esvc_path)
         # #######################################################################
         self.rewards_file = open(self.reward_path + 'rewards.txt', "a+")
-        self.esvc_file = open(self.esvc_path + 'esvc.txt', "a+")
-        self.policy_file = open(self.irl_agent.output_directory_path + 'policy.txt', "a+")
+        # self.esvc_file = open(self.esvc_path + 'esvc.txt', "a+")
+        # self.policy_file = open(self.irl_agent.output_directory_path + 'policy.txt', "a+")
         # #######################################################################
 
     def run(self):
@@ -74,7 +74,7 @@ class DME:
             print("Distance:" + str(self.cumulative_dists[i])+"\n")
             self.plot_cumulative_dists(i)
             self.irl_agent.plot_esvc_mat(self.esvc_path, i)
-            self.save_esvc(i)
+            # self.save_esvc(i)
 
     def plot_reward(self, nof_iter):
         dim = int(np.sqrt(len(self.irl_agent.env.state_list)))
@@ -84,18 +84,6 @@ class DME:
         fig = hm.get_figure()
         fig.savefig(self.reward_path + str(nof_iter) + '.png')
         fig.clf()
-
-    # def save_reward0(self, nof_iter):
-    #     self.rewards_file0.write(str(nof_iter) + "\n")
-    #     self.rewards_file0.write("[")
-    #
-    #     for i, r in enumerate(self.irl_agent.state_rewards):
-    #         self.rewards_file0.write(str(r))
-    #         if i != len(self.irl_agent.state_rewards)-1:
-    #             self.rewards_file0.write(", ")
-    #
-    #     self.rewards_file0.write("] \n")
-    #     self.rewards_file0.flush()
 
     def save_reward(self, nof_iter):
         self.rewards_file.write(str(nof_iter) + "\n")
@@ -139,7 +127,6 @@ class DME:
         self.policy_file.flush()
 
     def plot_reward2(self, nof_iter):
-        # plt.ylim(-0.2, 0.2)
         plt.plot(range(len(self.irl_agent.state_rewards)), self.irl_agent.state_rewards)
         plt.savefig(self.reward_path + '_' + str(nof_iter) + '.png')
         plt.clf()
@@ -164,8 +151,6 @@ class DME:
         self.irl_agent.state_rewards[self.irl_agent.env.goal_id] = 100
 
         self.irl_agent.fast_backward_pass()
-        # for s in range(1600):
-        #     print(s, "\t", self.irl_agent.fast_policy[s, :])
         self.irl_agent.run_policy()
 
 

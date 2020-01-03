@@ -52,7 +52,7 @@ class IRLAgent:
 
         self.mc_normalized_states()
 
-        self.q_file = open(self.output_directory_path + 'q.txt', "a+")
+        # self.q_file = open(self.output_directory_path + 'q.txt', "a+")
 
     ###############################################
     # [1]: Calculates the policy using an approximate version of Value Iteration
@@ -219,22 +219,22 @@ class IRLAgent:
         fig.savefig(path + "esvc_" + str(i) + '.png')
         fig.clf()
 
-    def save_q(self, q, ind):
-        self.q_file.write(str(ind) + "\n")
-        self.q_file.write("[")
-
-        for i in range(len(self.env.states)):
-            self.q_file.write("[")
-            for j in range(len(self.env.actions)):
-                self.q_file.write(str(q[i, j]))
-                if j != len(self.env.actions) - 1:
-                    self.q_file.write(", ")
-            self.q_file.write("]")
-            if i != len(self.env.states) - 1:
-                self.q_file.write(", ")
-
-        self.q_file.write("] \n\n")
-        self.q_file.flush()
+    # def save_q(self, q, ind):
+    #     self.q_file.write(str(ind) + "\n")
+    #     self.q_file.write("[")
+    #
+    #     for i in range(len(self.env.states)):
+    #         self.q_file.write("[")
+    #         for j in range(len(self.env.actions)):
+    #             self.q_file.write(str(q[i, j]))
+    #             if j != len(self.env.actions) - 1:
+    #                 self.q_file.write(", ")
+    #         self.q_file.write("]")
+    #         if i != len(self.env.states) - 1:
+    #             self.q_file.write(", ")
+    #
+    #     self.q_file.write("] \n\n")
+    #     self.q_file.flush()
 
     def run_policy(self):
         env = gym.make('MountainCarContinuous-v0')
