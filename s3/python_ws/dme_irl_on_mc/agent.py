@@ -53,7 +53,7 @@ class IRLAgent:
 
     ###############################################
     # [1]: Calculates the policy using an approximate version of Value Iteration
-    def fast_backward_pass(self, ind):
+    def fast_backward_pass(self):
         # print("+ IRLAgent.backward_pass")
 
         v = np.ones((len(self.env.states), 1)) * -sys.float_info.max

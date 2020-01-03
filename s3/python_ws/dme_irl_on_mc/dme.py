@@ -52,7 +52,7 @@ class DME:
 
             # solve mdp wrt current reward
             t0 = time.time()
-            self.irl_agent.fast_backward_pass(i)
+            self.irl_agent.fast_backward_pass()
             t1 = time.time()
             self.irl_agent.fast_forward_pass()   # calculate irl.esvc to use it in calculation of irl.exp_fc
             t2 = time.time()
@@ -163,23 +163,16 @@ class DME:
         self.irl_agent.state_rewards = -np.ones((len(self.irl_agent.env.states), 1))
         self.irl_agent.state_rewards[self.irl_agent.env.goal_id] = 100
 
-        # self.irl_agent.fast_backward_pass()
-        # draw_advantage(self.irl_agent.advantage)
+        self.irl_agent.fast_backward_pass()
+        # for s in range(1600):
+        #     print(s, "\t", self.irl_agent.fast_policy[s, :])
 
 
 def kl_divergence(p, q):
     return np.sum(np.where(p != 0, p * np.log(p / q), 0))
 
 
-def draw_advantage(p):
-    td = np.max(p, axis=1)
-    dim = int(np.sqrt(len(td)))
-    data = np.reshape(td, (dim, dim))
-    _ = sb.heatmap(np.exp(data))
-    plt.show()
-
-
 if __name__ == "__main__":
     dme = DME()
-    dme.run()
-    # dme.test_backward_pass()
+    # dme.run()
+    dme.test_backward_pass()
