@@ -166,6 +166,7 @@ class DME:
         self.irl_agent.fast_backward_pass()
         # for s in range(1600):
         #     print(s, "\t", self.irl_agent.fast_policy[s, :])
+        self.irl_agent.run_policy()
 
 
 def kl_divergence(p, q):

@@ -13,6 +13,9 @@ import seaborn as sb
 import os
 import time
 
+import gym
+from utils import *
+
 
 class IRLAgent:
     def __init__(self):
@@ -232,3 +235,18 @@ class IRLAgent:
 
         self.q_file.write("] \n\n")
         self.q_file.flush()
+
+    def run_policy(self):
+        env = gym.make('MountainCarContinuous-v0')
+        done = False
+
+        s = env.reset()
+        current_s = self.env.find_closest_state(State(s[0], s[1]))
+        while True:
+            env.render()
+            action_id = np.random.choice(range(len(self.env.actions)), 1, self.fast_policy[current_s, :].tolist())[0]
+            # action_id = np.argmax(self.fast_policy[current_s, :])
+            next_s, _, done, _ = env.step(np.array([self.env.actions[action_id].force]))
+            current_s = self.env.find_closest_state(State(next_s[0], next_s[1]))
+            time.sleep(0.05)
+            print("State: ", current_s, " - Action: ", self.env.actions[action_id].force)
