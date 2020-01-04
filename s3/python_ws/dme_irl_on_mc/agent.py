@@ -31,6 +31,8 @@ class IRLAgent:
         self.output_directory_path = self.env.path + 'output/' + self.output_directory_suffix + "/"
         # Creating the output directory for the individual run
         os.makedirs(self.output_directory_path)
+        self.videodir = self.output_directory_path + "video/"
+        os.makedirs(self.videodir)
 
         self.vi_loop = 150
         self.normalized_states = np.empty(len(self.env.states))
@@ -102,7 +104,7 @@ class IRLAgent:
         for loop_ctr in range(self.vi_loop-1):
             self.cur_loop_ctr = loop_ctr
             self.esvc_mat[self.env.goal_id][loop_ctr] = 0
-            self.esvc_mat[:, loop_ctr + 1] = self.ffast_calc_esvc_unnorm()
+            self.esvc_mat[:, loop_ctr + 1] = self.fast_calc_esvc_unnorm()
 
             if loop_ctr % 20 == 19:
                 print('\rForward Pass: {}'.format((loop_ctr + 1)), end='')
@@ -114,29 +116,7 @@ class IRLAgent:
 
     ###############################################
 
-    # calculation of the unnormalized esvc for state 'index'
-    def calc_esvc_unnorm(self, index, loop_ctr):
-        sum_esvc = 0
-        for i in range(len(self.env.states)):
-            for j in range(len(self.env.actions)):
-                sum_esvc += self.env.transition[i][j][index] * self.policy(i, j) * self.esvc_mat[i, loop_ctr]
-        return sum_esvc
-
-    ###############################################
-
-    # calculation of the unnormalized esvc for state 'index'
-    def fast_calc_esvc_unnorm(self, loop_ctr):
-        esvc = np.zeros((len(self.env.states), len(self.env.states)))
-
-        for i in range(len(self.env.states)):
-            esvc[:, i] = np.matmul(self.env.transition[i][:][:].T, self.fast_policy[i][:].T) \
-                         * self.esvc_mat[i][loop_ctr]
-
-        return np.sum(esvc, axis=1)
-
-    ###############################################
-
-    def ffast_calc_esvc_unnorm(self):
+    def fast_calc_esvc_unnorm(self):
         esvc_arr = [self.esvcind(i) for i in range(len(self.env.states))]
         return esvc_arr
 
@@ -236,17 +216,24 @@ class IRLAgent:
     #     self.q_file.write("] \n\n")
     #     self.q_file.flush()
 
-    def run_policy(self):
+    def run_policy(self, str_id):
+        outdir = self.videodir + str_id + "/"
+        os.makedirs(outdir)
         env = gym.make('MountainCarContinuous-v0')
+        env = gym.wrappers.Monitor(env, outdir, video_callable=lambda episode_id: True)  # episode_id % 10 == 0)
         done = False
+        step_ctr = 0
 
         s = env.reset()
         current_s = self.env.find_closest_state(State(s[0], s[1]))
-        while True:
+        while not done and step_ctr < 1000:
             env.render()
             action_id = np.random.choice(range(len(self.env.actions)), 1, self.fast_policy[current_s, :].tolist())[0]
             # action_id = np.argmax(self.fast_policy[current_s, :])
             next_s, _, done, _ = env.step(np.array([self.env.actions[action_id].force]))
             current_s = self.env.find_closest_state(State(next_s[0], next_s[1]))
-            time.sleep(0.05)
+            step_ctr += 1
+            # time.sleep(0.01)
             print("State: ", current_s, " - Action: ", self.env.actions[action_id].force)
+
+        env.close()
