@@ -76,6 +76,9 @@ class DME:
             self.irl_agent.plot_esvc_mat(self.esvc_path, i)
             # self.save_esvc(i)
 
+            if i % 100 == 0:
+                self.irl_agent.run_policy(str(i))
+
     def plot_reward(self, nof_iter):
         dim = int(np.sqrt(len(self.irl_agent.env.state_list)))
         data = np.reshape(self.irl_agent.state_rewards, (dim, dim))
@@ -97,34 +100,34 @@ class DME:
         self.rewards_file.write("] \n")
         self.rewards_file.flush()
 
-    def save_esvc(self, nof_iter):
-        self.esvc_file.write(str(nof_iter) + "\n")
-        self.esvc_file.write("[")
-
-        for i, r in enumerate(self.irl_agent.esvc_mat[:, -1]):
-            self.esvc_file.write(str(r))
-            if i != len(self.irl_agent.esvc_mat[:, -1]) - 1:
-                self.esvc_file.write(", ")
-
-        self.esvc_file.write("] \n")
-        self.esvc_file.flush()
-
-    def save_policy(self, ind):
-        self.policy_file.write(str(ind) + "\n")
-        self.policy_file.write("[")
-
-        for i in range(len(self.irl_agent.env.states)):
-            self.policy_file.write("[")
-            for j in range(len(self.irl_agent.env.actions)):
-                self.policy_file.write(str(self.irl_agent.fast_policy[i, j]))
-                if j != len(self.irl_agent.env.actions) - 1:
-                    self.policy_file.write(", ")
-            self.policy_file.write("]")
-            if i != len(self.irl_agent.env.states) - 1:
-                self.policy_file.write(", ")
-
-        self.policy_file.write("] \n\n")
-        self.policy_file.flush()
+    # def save_esvc(self, nof_iter):
+    #     self.esvc_file.write(str(nof_iter) + "\n")
+    #     self.esvc_file.write("[")
+    #
+    #     for i, r in enumerate(self.irl_agent.esvc_mat[:, -1]):
+    #         self.esvc_file.write(str(r))
+    #         if i != len(self.irl_agent.esvc_mat[:, -1]) - 1:
+    #             self.esvc_file.write(", ")
+    #
+    #     self.esvc_file.write("] \n")
+    #     self.esvc_file.flush()
+    #
+    # def save_policy(self, ind):
+    #     self.policy_file.write(str(ind) + "\n")
+    #     self.policy_file.write("[")
+    #
+    #     for i in range(len(self.irl_agent.env.states)):
+    #         self.policy_file.write("[")
+    #         for j in range(len(self.irl_agent.env.actions)):
+    #             self.policy_file.write(str(self.irl_agent.fast_policy[i, j]))
+    #             if j != len(self.irl_agent.env.actions) - 1:
+    #                 self.policy_file.write(", ")
+    #         self.policy_file.write("]")
+    #         if i != len(self.irl_agent.env.states) - 1:
+    #             self.policy_file.write(", ")
+    #
+    #     self.policy_file.write("] \n\n")
+    #     self.policy_file.flush()
 
     def plot_reward2(self, nof_iter):
         plt.plot(range(len(self.irl_agent.state_rewards)), self.irl_agent.state_rewards)
@@ -160,5 +163,5 @@ def kl_divergence(p, q):
 
 if __name__ == "__main__":
     dme = DME()
-    # dme.run()
-    dme.test_backward_pass()
+    dme.run()
+    # dme.test_backward_pass()
