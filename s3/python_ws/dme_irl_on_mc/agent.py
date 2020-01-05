@@ -21,8 +21,8 @@ class IRLAgent:
     def __init__(self):
         self.env = IRLMDP()
         # initializes nn with random weights
-        self.rew_nn = MyNN(nn_arch=(2, 16, 32, 64, 16, 128, 64, 32, 16, 8, 1),
-                           acts=[sigm, sigm, sigm, sigm, sigm, gaussian, sigm, sigm, sigm, linear])
+        self.rew_nn = MyNN(nn_arch=(2, 8, 16, 32, 64, 16, 32, 16, 64, 32, 16, 8, 1),
+                           acts=[sigm, sigm, sigm, sigm, sigm, sigm, sigm, gaussian, sigm, sigm, sigm, linear])
         self.state_rewards = np.empty(len(self.env.states), dtype=float)
         self.initialize_rewards()
 
@@ -220,7 +220,7 @@ class IRLAgent:
         outdir = self.videodir + str_id + "/"
         os.makedirs(outdir)
         env = gym.make('MountainCarContinuous-v0')
-        env = gym.wrappers.Monitor(env, outdir, video_callable=lambda episode_id: True)  # episode_id % 10 == 0)
+        env = gym.wrappers.Monitor(env, outdir, video_callable=lambda episode_id: True)
         done = False
         step_ctr = 0
 
