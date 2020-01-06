@@ -234,6 +234,6 @@ class IRLAgent:
             current_s = self.env.find_closest_state(State(next_s[0], next_s[1]))
             step_ctr += 1
             # time.sleep(0.01)
-            print("State: ", current_s, " - Action: ", self.env.actions[action_id].force)
+            # print("State: ", current_s, " - Action: ", self.env.actions[action_id].force)
 
         env.close()
