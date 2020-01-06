@@ -34,7 +34,7 @@ class IRLMDP:
 
     # Methods specific to MC.Cont. environment
     def get_start_state(self):
-        return self.find_closest_state(State(-0.5, 0))
+        return self.find_closest_state(State(np.random.uniform(low=-0.6, high=-0.4), 0))
 
     def get_goal_state(self):
         return self.find_closest_state(State(0.45, 0.055))
