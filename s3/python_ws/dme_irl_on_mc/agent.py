@@ -6,7 +6,7 @@
 """
 import numpy as np
 from mccont_mdp import MCContMDP
-from neural_network import MyNN, sigm, linear, relu, tanh, gaussian
+from neural_network import MyNN, sigm, linear, gaussian
 
 import sys
 import seaborn as sb
@@ -27,14 +27,22 @@ class IRLAgent:
         self.initialize_rewards()
 
         # To output the results, the following are used
-        self.path = 'data/mccont_expert_trajs/'
+        self.path = 'data/mccont/'
         self.output_directory_suffix = str(int(time.time()))
-        self.output_directory_path = self.path + 'output/' + self.output_directory_suffix + "/"
         # Creating the output directory for the individual run
-        os.makedirs(self.output_directory_path)
+        self.output_directory_path = self.path + 'output/' + self.output_directory_suffix + "/"
         self.videodir = self.output_directory_path + "video/"
+        self.reward_path = self.output_directory_path + 'reward/'
+        self.esvc_path = self.output_directory_path + 'esvc/'
+        os.makedirs(self.output_directory_path)
         os.makedirs(self.videodir)
+        os.makedirs(self.reward_path)
+        os.makedirs(self.esvc_path)
+        self.rewards_file = open(self.reward_path + 'rewards.txt', "a+")
+        # self.esvc_file = open(self.esvc_path + 'esvc.txt', "a+")
+        # self.policy_file = open(self.irl_agent.output_directory_path + 'policy.txt', "a+")
 
+        # Variables used in calculations
         self.vi_loop = 150
         self.normalized_states = np.empty(len(self.env.states))
         self.v = np.empty((len(self.env.states), self.vi_loop), dtype=float)
@@ -144,7 +152,8 @@ class IRLAgent:
 
         cumulative_emp_fc /= len(trajectories)  # normalization over all trajectories
         self.emp_fc = cumulative_emp_fc
-        self.plot_emp_fc('empfc')
+        # self.plot_emp_fc('empfc')
+        self.plot_in_state_space(self.emp_fc, path=self.output_directory_path+'empfc.png')
 
     def policy(self, sid, aid):
         return np.exp(self.q[sid][aid] - self.v[sid, -1])   # last column in the v matrix
@@ -159,14 +168,14 @@ class IRLAgent:
         self.state_rewards[self.batch_ids] = rew_batch[:, 0]
 
     def backpropagation_batch(self, dist, lr):
-        self.rew_nn.backprop_diff(dist[self.batch_ids].tolist(), np.array(self.env.state_list)[self.batch_ids].tolist(),
+        self.rew_nn.backprop_diff(dist[self.batch_ids].tolist(), self.env.states[self.batch_ids].tolist(),
                                   self.state_rewards[self.batch_ids], lr)
 
     def initialize_rewards(self):
         self.state_rewards = np.random.rand(len(self.state_rewards)) * 2 - 1
 
     def mc_normalized_states(self):
-        normalized_states = np.asarray(self.env.state_list)
+        normalized_states = self.env.states
 
         min0 = np.min(normalized_states[:, 0])
         min1 = np.min(normalized_states[:, 1])
@@ -178,32 +187,64 @@ class IRLAgent:
 
         self.normalized_states = normalized_states * 2 - 1
 
-    def plot_esvc(self, path, name, data):
-        dim = int(np.sqrt(len(self.env.state_list)))
-        hm = sb.heatmap(np.reshape(data, (dim, dim)))
+    # def plot_esvc(self, path, name, data):
+    #     dim = int(np.sqrt(self.env.num_states))
+    #     hm = sb.heatmap(np.reshape(data, (dim, dim)))
+    #     fig = hm.get_figure()
+    #     fig.savefig(path+'/' + name + '.png')
+    #     fig.clf()
+
+    # def plot_emp_fc(self, name):
+    #     dim = int(np.sqrt(self.env.num_states))
+    #     hm = sb.heatmap(np.reshape(self.emp_fc, (dim, dim)).T)
+    #     hm.set_title('Empirical Feature Counts')
+    #     hm.set_xlabel('x')
+    #     hm.set_ylabel('velocity')
+    #     fig = hm.get_figure()
+    #     fig.savefig(self.output_directory_path + name + '.png')
+    #     fig.clf()
+
+    # def plot_esvc_mat(self, path, i):
+    #     dim = int(np.sqrt(self.env.num_states))
+    #     hm = sb.heatmap(np.reshape(self.esvc_mat[:, -1], (dim, dim)).T)
+    #     hm.set_title('Expected State Visitation Counts')
+    #     hm.set_xlabel('x')
+    #     hm.set_ylabel('velocity')
+    #     fig = hm.get_figure()
+    #     fig.savefig(path + "esvc_" + str(i) + '.png')
+    #     fig.clf()
+
+    def plot_reward(self, nof_iter):
+        data = np.reshape(self.state_rewards, self.env.shape)
+
+        hm = sb.heatmap(data)
         fig = hm.get_figure()
-        fig.savefig(path+'/' + name + '.png')
+        fig.savefig(self.reward_path + str(nof_iter) + '.png')
         fig.clf()
 
-    def plot_emp_fc(self, name):
-        dim = int(np.sqrt(len(self.env.state_list)))
-        hm = sb.heatmap(np.reshape(self.emp_fc, (dim, dim)).T)
-        hm.set_title('Empirical Feature Counts')
-        hm.set_xlabel('x')
-        hm.set_ylabel('velocity')
+    def plot_in_state_space(self, inp, ind=-1, path=""):
+        if path == "":
+            path = self.output_directory_path
+        else:
+            if ind != -1:
+                path = path+str(ind)
+        data = np.reshape(inp, self.env.shape)
+        hm = sb.heatmap(data)
         fig = hm.get_figure()
-        fig.savefig(self.output_directory_path + name + '.png')
+        fig.savefig(path + '.png')
         fig.clf()
 
-    def plot_esvc_mat(self, path, i):
-        dim = int(np.sqrt(len(self.env.state_list)))
-        hm = sb.heatmap(np.reshape(self.esvc_mat[:, -1], (dim, dim)).T)
-        hm.set_title('Expected State Visitation Counts')
-        hm.set_xlabel('x')
-        hm.set_ylabel('velocity')
-        fig = hm.get_figure()
-        fig.savefig(path + "esvc_" + str(i) + '.png')
-        fig.clf()
+    def save_reward(self, nof_iter):
+        self.rewards_file.write(str(nof_iter) + "\n")
+        self.rewards_file.write("[")
+
+        for i, r in enumerate(self.state_rewards):
+            self.rewards_file.write(str(r))
+            if i != len(self.state_rewards)-1:
+                self.rewards_file.write(", ")
+
+        self.rewards_file.write("] \n")
+        self.rewards_file.flush()
 
     # def save_q(self, q, ind):
     #     self.q_file.write(str(ind) + "\n")

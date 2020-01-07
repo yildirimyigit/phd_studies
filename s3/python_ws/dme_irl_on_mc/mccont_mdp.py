@@ -13,6 +13,8 @@ class MCContMDP:
         self.x_div = 80
         self.v_div = 28
 
+        self.shape = (self.x_div, self.v_div)
+
         self.num_states = self.x_div * self.v_div
         self.num_actions = 20
 

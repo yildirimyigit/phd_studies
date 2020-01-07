@@ -10,7 +10,6 @@ from agent import IRLAgent
 
 import seaborn as sb
 
-import os
 import time
 import matplotlib.pyplot as plt
 
@@ -23,18 +22,6 @@ class DME:
         # self.losses = np.zeros((self.iter_count, len(self.irl_agent.emp_fc)))
         self.cumulative_dists = np.zeros(self.iter_count)
 
-        # #######################################################################
-        # create the directory to be used for plotting for rewards
-        self.reward_path = self.irl_agent.output_directory_path + 'reward/'
-        self.esvc_path = self.irl_agent.output_directory_path + 'esvc/'
-        os.makedirs(self.reward_path)
-        os.makedirs(self.esvc_path)
-        # #######################################################################
-        self.rewards_file = open(self.reward_path + 'rewards.txt', "a+")
-        # self.esvc_file = open(self.esvc_path + 'esvc.txt', "a+")
-        # self.policy_file = open(self.irl_agent.output_directory_path + 'policy.txt', "a+")
-        # #######################################################################
-
     def run(self):
 
         lr = 1e-3
@@ -46,8 +33,8 @@ class DME:
 
             self.irl_agent.reward_batch()
 
-            self.save_reward(i)
-            self.plot_reward(i)
+            self.irl_agent.save_reward(i)
+            self.irl_agent.plot_reward(i)
             # self.plot_reward2(i)
 
             # solve mdp wrt current reward
@@ -73,32 +60,12 @@ class DME:
             self.cumulative_dists[i] = np.sum(dist)
             print("Distance:" + str(self.cumulative_dists[i])+"\n")
             self.plot_cumulative_dists(i)
-            self.irl_agent.plot_esvc_mat(self.esvc_path, i)
+            # self.irl_agent.plot_esvc_mat(self.irl_agent.esvc_path, i)
+            self.irl_agent.plot_in_state_space(self.irl_agent.esvc, i, self.irl_agent.esvc_path)
             # self.save_esvc(i)
 
             if i % 100 == 0:
                 self.irl_agent.run_policy(str(i))
-
-    def plot_reward(self, nof_iter):
-        dim = int(np.sqrt(len(self.irl_agent.env.state_list)))
-        data = np.reshape(self.irl_agent.state_rewards, (dim, dim))
-
-        hm = sb.heatmap(data)
-        fig = hm.get_figure()
-        fig.savefig(self.reward_path + str(nof_iter) + '.png')
-        fig.clf()
-
-    def save_reward(self, nof_iter):
-        self.rewards_file.write(str(nof_iter) + "\n")
-        self.rewards_file.write("[")
-
-        for i, r in enumerate(self.irl_agent.state_rewards):
-            self.rewards_file.write(str(r))
-            if i != len(self.irl_agent.state_rewards)-1:
-                self.rewards_file.write(", ")
-
-        self.rewards_file.write("] \n")
-        self.rewards_file.flush()
 
     # def save_esvc(self, nof_iter):
     #     self.esvc_file.write(str(nof_iter) + "\n")
@@ -129,19 +96,19 @@ class DME:
     #     self.policy_file.write("] \n\n")
     #     self.policy_file.flush()
 
-    def plot_reward2(self, nof_iter):
-        plt.plot(range(len(self.irl_agent.state_rewards)), self.irl_agent.state_rewards)
-        plt.savefig(self.reward_path + '_' + str(nof_iter) + '.png')
-        plt.clf()
-
-    def plot_reward_delta(self, delta, i):
-        dim = int(np.sqrt(len(self.irl_agent.env.state_list)))
-        data = np.reshape(delta, (dim, dim))
-
-        hm = sb.heatmap(data)
-        fig = hm.get_figure()
-        fig.savefig(self.reward_path + 'delta_' + str(i) + '.png')
-        fig.clf()
+    # def plot_reward2(self, nof_iter):
+    #     plt.plot(range(len(self.irl_agent.state_rewards)), self.irl_agent.state_rewards)
+    #     plt.savefig(self.reward_path + '_' + str(nof_iter) + '.png')
+    #     plt.clf()
+    #
+    # def plot_reward_delta(self, delta, i):
+    #     dim = int(np.sqrt(len(self.irl_agent.env.state_list)))
+    #     data = np.reshape(delta, (dim, dim))
+    #
+    #     hm = sb.heatmap(data)
+    #     fig = hm.get_figure()
+    #     fig.savefig(self.reward_path + 'delta_' + str(i) + '.png')
+    #     fig.clf()
 
     def plot_cumulative_dists(self, i):
         plt.plot(range(i), self.cumulative_dists[:i])
@@ -149,12 +116,12 @@ class DME:
         plt.clf()
 
     # testing value iteration algorithm of the agent
-    def test_backward_pass(self):
-        self.irl_agent.state_rewards = -np.ones((len(self.irl_agent.env.states), 1))
-        self.irl_agent.state_rewards[self.irl_agent.env.goal_id] = 100
-
-        self.irl_agent.fast_backward_pass()
-        self.irl_agent.run_policy()
+    # def test_backward_pass(self):
+    #     self.irl_agent.state_rewards = -np.ones((len(self.irl_agent.env.states), 1))
+    #     self.irl_agent.state_rewards[self.irl_agent.env.goal_id] = 100
+    #
+    #     self.irl_agent.fast_backward_pass()
+    #     self.irl_agent.run_policy('0')
 
 
 def kl_divergence(p, q):
