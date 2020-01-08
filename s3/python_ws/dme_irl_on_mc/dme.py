@@ -66,7 +66,10 @@ class DME:
             # self.save_esvc(i)
 
             if i % 100 == 0:
-                self.irl_agent.run_policy(str(i))
+                try:
+                    self.irl_agent.run_policy(str(i))
+                except:
+                    pass
 
     # def save_esvc(self, nof_iter):
     #     self.esvc_file.write(str(nof_iter) + "\n")
