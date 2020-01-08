@@ -13,6 +13,8 @@ class MCContMDP:
         self.x_div = 80
         self.v_div = 28
 
+        self.shape = (self.x_div, self.v_div)
+
         self.num_states = self.x_div * self.v_div
         self.num_actions = 20
 
@@ -101,6 +103,16 @@ class MCContMDP:
 
         return min_ind
 
+    def find_closest_action(self, action):
+        min_ind = -1
+        min_dist = np.inf
+        for i in range(len(self.actions)):
+            dist = (action-self.actions[i])**2
+            if dist < min_dist:
+                min_dist = dist
+                min_ind = i
+        return min_ind
+
     def get_start_state(self):
         s = np.array([np.random.uniform(low=-0.6, high=-0.4), 0])
         closest = self.find_closest_state(s)
@@ -108,13 +120,15 @@ class MCContMDP:
 
     def get_goal_state(self):
         goal = []
-        for s in self.states:
+        for i, s in enumerate(self.states):
             if s[0] > 0.45:  # 0.45 is env.goal_position
-                goal.append(s)
+                goal.append(i)
         return np.array(goal)
 
-# if __name__ == "__main__":
-#     mcc = MCContMDP()
+
+if __name__ == "__main__":
+    mcc = MCContMDP()
 #     print(mcc.get_start_state())
 #     print(mcc.get_goal_state())
-#     print("here")
+    print(mcc.find_closest_action(np.array([0])))
+    print("here")
