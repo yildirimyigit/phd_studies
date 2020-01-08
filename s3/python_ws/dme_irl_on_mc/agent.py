@@ -43,7 +43,7 @@ class IRLAgent:
         # self.policy_file = open(self.irl_agent.output_directory_path + 'policy.txt', "a+")
 
         # Variables used in calculations
-        self.vi_loop = 150
+        self.vi_loop = 200
         self.normalized_states = np.empty(len(self.env.states))
         self.v = np.empty((len(self.env.states), self.vi_loop), dtype=float)
         self.q = np.empty((len(self.env.states), len(self.env.actions)), dtype=float)
@@ -120,7 +120,7 @@ class IRLAgent:
             self.esvc_mat[goal_states][loop_ctr] = 0
             self.esvc_mat[:, loop_ctr + 1] = self.fast_calc_esvc_unnorm()
 
-            if loop_ctr % 20 == 19:
+            if loop_ctr % 10 == 9:
                 print('\rForward Pass: {}'.format((loop_ctr + 1)), end='')
 
         print('')
@@ -153,7 +153,8 @@ class IRLAgent:
         cumulative_emp_fc /= len(trajectories)  # normalization over all trajectories
         self.emp_fc = cumulative_emp_fc
         # self.plot_emp_fc('empfc')
-        self.plot_in_state_space(self.emp_fc, path=self.output_directory_path+'empfc.png')
+        self.plot_in_state_space(self.emp_fc, path=self.output_directory_path+'empfc.png',
+                                 title='Empirical Feature Counts')
 
     def policy(self, sid, aid):
         return np.exp(self.q[sid][aid] - self.v[sid, -1])   # last column in the v matrix
@@ -215,21 +216,25 @@ class IRLAgent:
     #     fig.clf()
 
     def plot_reward(self, nof_iter):
-        data = np.reshape(self.state_rewards, self.env.shape)
+        # data = np.reshape(self.state_rewards, self.env.shape)
+        #
+        # hm = sb.heatmap(data)
+        # fig = hm.get_figure()
+        # fig.savefig(self.reward_path + str(nof_iter) + '.png')
+        # fig.clf()
+        self.plot_in_state_space(self.state_rewards, ind=nof_iter, path=self.reward_path, title='State Rewards')
 
-        hm = sb.heatmap(data)
-        fig = hm.get_figure()
-        fig.savefig(self.reward_path + str(nof_iter) + '.png')
-        fig.clf()
-
-    def plot_in_state_space(self, inp, ind=-1, path=""):
+    def plot_in_state_space(self, inp, ind=-1, path="", xlabel='x', ylabel='v', title=''):
         if path == "":
             path = self.output_directory_path
         else:
             if ind != -1:
                 path = path+str(ind)
         data = np.reshape(inp, self.env.shape)
-        hm = sb.heatmap(data)
+        hm = sb.heatmap(data.T)
+        hm.set_title(title)
+        hm.set_xlabel(xlabel)
+        hm.set_ylabel(ylabel)
         fig = hm.get_figure()
         fig.savefig(path + '.png')
         fig.clf()
@@ -272,13 +277,13 @@ class IRLAgent:
         step_ctr = 0
 
         s = env.reset()
-        current_s = self.env.find_closest_state(State(s[0], s[1]))
+        current_s = self.env.find_closest_state(s)
         while not done and step_ctr < 1000:
             env.render()
             action_id = np.random.choice(range(len(self.env.actions)), 1, self.fast_policy[current_s, :].tolist())[0]
             # action_id = np.argmax(self.fast_policy[current_s, :])
-            next_s, _, done, _ = env.step(np.array([self.env.actions[action_id].force]))
-            current_s = self.env.find_closest_state(State(next_s[0], next_s[1]))
+            next_s, _, done, _ = env.step(np.array([self.env.actions[action_id]]))
+            current_s = self.env.find_closest_state(next_s)
             step_ctr += 1
             # time.sleep(0.01)
             # print("State: ", current_s, " - Action: ", self.env.actions[action_id].force)

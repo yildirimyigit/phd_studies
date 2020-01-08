@@ -120,9 +120,9 @@ class MCContMDP:
 
     def get_goal_state(self):
         goal = []
-        for s in self.states:
+        for i, s in enumerate(self.states):
             if s[0] > 0.45:  # 0.45 is env.goal_position
-                goal.append(s)
+                goal.append(i)
         return np.array(goal)
 
 

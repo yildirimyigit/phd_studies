@@ -61,7 +61,8 @@ class DME:
             print("Distance:" + str(self.cumulative_dists[i])+"\n")
             self.plot_cumulative_dists(i)
             # self.irl_agent.plot_esvc_mat(self.irl_agent.esvc_path, i)
-            self.irl_agent.plot_in_state_space(self.irl_agent.esvc, i, self.irl_agent.esvc_path)
+            self.irl_agent.plot_in_state_space(self.irl_agent.esvc, i, self.irl_agent.esvc_path,
+                                               title='Expected State Visitation Counts')
             # self.save_esvc(i)
 
             if i % 100 == 0:
