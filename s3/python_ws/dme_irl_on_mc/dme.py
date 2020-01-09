@@ -24,7 +24,7 @@ class DME:
 
     def run(self):
 
-        lr = 1e-3
+        lr = 1e-2
         decay = 1e-8
 
         for i in range(self.iter_count):
@@ -52,7 +52,7 @@ class DME:
             diff = self.irl_agent.emp_fc - self.irl_agent.esvc
             print("Diff sum: ", repr(np.sum(np.abs(diff))))
             # dist = np.power(diff, 2)
-            dist = np.pow(diff, 2)
+            dist = np.power(diff, 2)
 
             lr = np.maximum(lr - decay, 1e-10)
             self.irl_agent.backpropagation_batch(dist, lr)
@@ -118,6 +118,12 @@ class DME:
         plt.plot(range(i), self.cumulative_dists[:i])
         plt.savefig(self.irl_agent.output_directory_path + 'loss.png')
         plt.clf()
+
+        if i > 0:
+            mx = np.max([0, i-100])
+            plt.plot(range(mx, i), self.cumulative_dists[mx:i])
+            plt.savefig(self.irl_agent.output_directory_path + 'last_100_loss.png')
+            plt.clf()
 
     # testing value iteration algorithm of the agent
     # def test_backward_pass(self):
