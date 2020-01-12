@@ -46,7 +46,7 @@ class IRLAgent:
 
         # Variables used in calculations
         self.vi_loop = 200
-        self.normalized_states = np.empty(len(self.env.states))
+        self.normalized_states = np.empty_like(self.env.states)
         self.v = np.empty((len(self.env.states), self.vi_loop), dtype=float)
         self.q = np.empty((len(self.env.states), len(self.env.actions)), dtype=float)
         self.advantage = np.empty((len(self.env.states), len(self.env.actions)), dtype=float)
@@ -119,7 +119,7 @@ class IRLAgent:
         self.esvc_mat[start_states, :] = 1
         for loop_ctr in range(self.vi_loop-1):
             self.cur_loop_ctr = loop_ctr
-            self.esvc_mat[goal_states][loop_ctr] = 0
+            self.esvc_mat[goal_states, loop_ctr] = 0
             self.esvc_mat[:, loop_ctr + 1] = self.fast_calc_esvc_unnorm()
 
             if loop_ctr % 10 == 9:
@@ -178,7 +178,7 @@ class IRLAgent:
         self.state_rewards = np.random.rand(len(self.state_rewards)) * 2 - 1
 
     def mc_normalized_states(self):
-        normalized_states = self.env.states
+        normalized_states = np.empty_like(self.env.states)
 
         min0 = np.min(normalized_states[:, 0])
         min1 = np.min(normalized_states[:, 1])
