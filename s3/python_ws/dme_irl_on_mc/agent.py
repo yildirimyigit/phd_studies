@@ -178,7 +178,7 @@ class IRLAgent:
         self.state_rewards = np.random.rand(len(self.state_rewards)) * 2 - 1
 
     def mc_normalized_states(self):
-        normalized_states = np.empty_like(self.env.states)
+        normalized_states = self.env.states.copy()
 
         min0 = np.min(normalized_states[:, 0])
         min1 = np.min(normalized_states[:, 1])
@@ -188,7 +188,7 @@ class IRLAgent:
         normalized_states -= [min0, min1]
         normalized_states /= [max0-min0, max1-min1]
 
-        self.normalized_states = normalized_states * 2 - 1
+        self.normalized_states = normalized_states * 2 - 1  # scaling the states between [-1, 1]
 
     # def plot_esvc(self, path, name, data):
     #     dim = int(np.sqrt(self.env.num_states))
