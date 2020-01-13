@@ -8,8 +8,6 @@
 import numpy as np
 from agent import IRLAgent
 
-import seaborn as sb
-
 import time
 import matplotlib.pyplot as plt
 

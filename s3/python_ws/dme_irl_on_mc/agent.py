@@ -171,7 +171,7 @@ class IRLAgent:
         self.state_rewards[self.batch_ids] = rew_batch[:, 0]
 
     def backpropagation_batch(self, dist, lr):
-        self.rew_nn.backprop_diff(dist[self.batch_ids].tolist(), self.env.states[self.batch_ids].tolist(),
+        self.rew_nn.backprop_diff(dist[self.batch_ids].tolist(), self.normalized_states[self.batch_ids].tolist(),
                                   self.state_rewards[self.batch_ids], lr)
 
     def initialize_rewards(self):
