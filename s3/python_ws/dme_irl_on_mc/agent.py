@@ -233,7 +233,7 @@ class IRLAgent:
             if ind != -1:
                 path = path+str(ind)
         data = np.reshape(inp, self.env.shape)
-        plt.figure(figsize=(18, 5))
+        plt.figure(figsize=(26, 13))
         hm = sb.heatmap(data.T)
         hm.set_title(title)
         hm.set_xlabel(xlabel)

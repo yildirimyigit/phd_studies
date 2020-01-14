@@ -10,8 +10,8 @@ import gym
 class MCContMDP:
     def __init__(self):
         self.data_path = "data/mccont/"
-        self.x_div = 80
-        self.v_div = 28
+        self.x_div = 60
+        self.v_div = 30
 
         self.shape = (self.x_div, self.v_div)
 
@@ -116,6 +116,9 @@ class MCContMDP:
     def get_start_state(self):
         s = np.array([np.random.uniform(low=-0.6, high=-0.4), 0])
         closest = self.find_closest_state(s)
+
+        closest = 604
+
         return np.array(closest)
 
     def get_goal_state(self):
