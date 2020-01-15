@@ -155,7 +155,7 @@ class IRLAgent:
         cumulative_emp_fc /= len(trajectories)  # normalization over all trajectories
         self.emp_fc = cumulative_emp_fc
         # self.plot_emp_fc('empfc')
-        self.plot_in_state_space(self.emp_fc, path=self.output_directory_path+'empfc.png',
+        self.plot_in_state_space(self.emp_fc, path=self.output_directory_path+'empfc',
                                  title='Empirical Feature Counts')
 
     def policy(self, sid, aid):
