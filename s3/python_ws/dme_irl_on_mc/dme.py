@@ -15,14 +15,14 @@ import matplotlib.pyplot as plt
 class DME:
     def __init__(self):
         self.irl_agent = IRLAgent()
-        self.iter_count = 10000
+        self.iter_count = 20000
 
         # self.losses = np.zeros((self.iter_count, len(self.irl_agent.emp_fc)))
         self.cumulative_dists = np.zeros(self.iter_count)
 
     def run(self):
 
-        lr = 1e-2
+        lr = 5e-2
         decay = 1e-8
 
         for i in range(self.iter_count):

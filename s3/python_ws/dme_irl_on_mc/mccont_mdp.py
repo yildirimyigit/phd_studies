@@ -11,12 +11,12 @@ class MCContMDP:
     def __init__(self):
         self.data_path = "data/mccont/"
         self.x_div = 60
-        self.v_div = 30
+        self.v_div = 40
 
         self.shape = (self.x_div, self.v_div)
 
         self.num_states = self.x_div * self.v_div
-        self.num_actions = 20
+        self.num_actions = 3
 
         self.is_generated = os.path.isfile(self.data_path + "actions.npy")
         self.states, self.actions, self.transitions = None, None, None
@@ -73,6 +73,10 @@ class MCContMDP:
             self.actions[i] = [cur_act]
             cur_act += act_step
 
+        self.actions[0] = -1
+        self.actions[1] = 0
+        self.actions[2] = 1
+
         env.reset()
         for i, s in enumerate(self.states):
             for j, a in enumerate(self.actions):
@@ -117,7 +121,7 @@ class MCContMDP:
         s = np.array([np.random.uniform(low=-0.6, high=-0.4), 0])
         closest = self.find_closest_state(s)
 
-        closest = 604
+        # closest = 604
 
         return np.array(closest)
 

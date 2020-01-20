@@ -22,9 +22,9 @@ class IRLAgent:
     def __init__(self):
         self.env = MCContMDP()
         # initializes nn with random weights
-        self.rew_nn = MyNN(nn_arch=(2, 8, 16, 32, 64, 16, 64, 128, 64, 16, 64, 32, 16, 8, 1),
-                           acts=[sigm, sigm, sigm, sigm, sigm, sigm, sigm, sigm, sigm,
-                                 gaussian, sigm, sigm, sigm, linear])
+        self.rew_nn = MyNN(nn_arch=(2, 8, 16, 32, 64, 16, 64, 32, 64, 32, 64, 16, 64, 32, 16, 8, 1),
+                           acts=[sigm, sigm, sigm, sigm, sigm, sigm, sigm, gaussian, sigm, sigm, sigm,
+                                 sigm, sigm, sigm, sigm, linear])
         self.state_rewards = np.empty(len(self.env.states), dtype=float)
         self.initialize_rewards()
 
@@ -281,7 +281,7 @@ class IRLAgent:
 
         s = env.reset()
         current_s = self.env.find_closest_state(s)
-        while not done and step_ctr < 2000:
+        while not done and step_ctr < 3000:
             env.render()
             action_id = np.random.choice(range(len(self.env.actions)), 1, self.fast_policy[current_s, :].tolist())[0]
             # action_id = np.argmax(self.fast_policy[current_s, :])
