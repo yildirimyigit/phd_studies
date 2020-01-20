@@ -121,7 +121,9 @@ class MCContMDP:
         s = np.array([np.random.uniform(low=-0.6, high=-0.4), 0])
         closest = self.find_closest_state(s)
 
-        # closest = 604
+        while np.all(self.transitions[closest, :, closest] == 1):
+            s = np.array([np.random.uniform(low=-0.6, high=-0.4), 0])
+            closest = self.find_closest_state(s)
 
         return np.array(closest)
 
