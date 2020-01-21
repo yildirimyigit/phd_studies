@@ -16,5 +16,17 @@ class DME:
         else:
             dev = torch.device("cpu")
 
-        self.error = torch.zeros(self.iter_count, device=dev)
+        self.error = torch.zeros(self.iter_count, device=dev, requires_grad=True)
         self.agent = IRLAgent(dev)
+
+    def tour(self):
+        self.agent.calculate_rewards()
+        self.agent.backward_pass()
+        self.agent.forward_pass()
+
+        diff = torch.abs(self.agent.emp_fc - self.agent.exp_fc)
+        print("Error: ", torch.sum(diff).item)
+
+    def run(self):
+        for i in range(self.iter_count):
+            self.tour()

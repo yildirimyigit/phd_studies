@@ -140,7 +140,4 @@ class MCContMDP:
 
 if __name__ == "__main__":
     mcc = MCContMDP()
-#     print(mcc.get_start_state())
-#     print(mcc.get_goal_state())
-    print(mcc.find_closest_action(np.array([0])))
-    print("here")
+    print("created")
