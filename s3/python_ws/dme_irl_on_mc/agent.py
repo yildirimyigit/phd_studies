@@ -212,40 +212,7 @@ class IRLAgent:
 
         self.normalized_states = normalized_states * 2 - 1  # scaling the states between [-1, 1]
 
-    # def plot_esvc(self, path, name, data):
-    #     dim = int(np.sqrt(self.env.num_states))
-    #     hm = sb.heatmap(np.reshape(data, (dim, dim)))
-    #     fig = hm.get_figure()
-    #     fig.savefig(path+'/' + name + '.png')
-    #     fig.clf()
-
-    # def plot_emp_fc(self, name):
-    #     dim = int(np.sqrt(self.env.num_states))
-    #     hm = sb.heatmap(np.reshape(self.emp_fc, (dim, dim)).T)
-    #     hm.set_title('Empirical Feature Counts')
-    #     hm.set_xlabel('x')
-    #     hm.set_ylabel('velocity')
-    #     fig = hm.get_figure()
-    #     fig.savefig(self.output_directory_path + name + '.png')
-    #     fig.clf()
-
-    # def plot_esvc_mat(self, path, i):
-    #     dim = int(np.sqrt(self.env.num_states))
-    #     hm = sb.heatmap(np.reshape(self.esvc_mat[:, -1], (dim, dim)).T)
-    #     hm.set_title('Expected State Visitation Counts')
-    #     hm.set_xlabel('x')
-    #     hm.set_ylabel('velocity')
-    #     fig = hm.get_figure()
-    #     fig.savefig(path + "esvc_" + str(i) + '.png')
-    #     fig.clf()
-
     def plot_reward(self, nof_iter):
-        # data = np.reshape(self.state_rewards, self.env.shape)
-        #
-        # hm = sb.heatmap(data)
-        # fig = hm.get_figure()
-        # fig.savefig(self.reward_path + str(nof_iter) + '.png')
-        # fig.clf()
         self.plot_in_state_space(self.state_rewards, ind=nof_iter, path=self.reward_path, title='State Rewards')
 
     def plot_in_state_space(self, inp, ind=-1, path="", xlabel='x', ylabel='v', title=''):
@@ -303,7 +270,7 @@ class IRLAgent:
 
         s = env.reset()
         current_s = self.env.find_closest_state(s)
-        while not done and step_ctr < 3000:
+        while not done and step_ctr < 3500:
             env.render()
             action_id = np.random.choice(range(len(self.env.actions)), 1, self.fast_policy[current_s, :].tolist())[0]
             # action_id = np.argmax(self.fast_policy[current_s, :])
