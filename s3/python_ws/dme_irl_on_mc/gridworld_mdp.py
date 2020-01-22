@@ -22,6 +22,9 @@ class GridworldMDP:
 
         self.generate_environment()
 
+        self.start_state_id = None
+        self.get_start_state()
+
     def generate_environment(self):
         if self.is_generated:
             self.states = self.load_np_file(self.data_path + "states.npy")
@@ -74,6 +77,7 @@ class GridworldMDP:
         self.save_np_file(self.data_path + "transitions.npy", self.transitions)
 
     def get_start_state(self):
+        self.start_state_id = 0
         return np.array(0)
 
     def get_goal_state(self):
