@@ -69,18 +69,6 @@ class DME:
                 except:
                     pass
 
-    # def save_esvc(self, nof_iter):
-    #     self.esvc_file.write(str(nof_iter) + "\n")
-    #     self.esvc_file.write("[")
-    #
-    #     for i, r in enumerate(self.irl_agent.esvc_mat[:, -1]):
-    #         self.esvc_file.write(str(r))
-    #         if i != len(self.irl_agent.esvc_mat[:, -1]) - 1:
-    #             self.esvc_file.write(", ")
-    #
-    #     self.esvc_file.write("] \n")
-    #     self.esvc_file.flush()
-    #
     # def save_policy(self, ind):
     #     self.policy_file.write(str(ind) + "\n")
     #     self.policy_file.write("[")
@@ -97,20 +85,6 @@ class DME:
     #
     #     self.policy_file.write("] \n\n")
     #     self.policy_file.flush()
-
-    # def plot_reward2(self, nof_iter):
-    #     plt.plot(range(len(self.irl_agent.state_rewards)), self.irl_agent.state_rewards)
-    #     plt.savefig(self.reward_path + '_' + str(nof_iter) + '.png')
-    #     plt.clf()
-    #
-    # def plot_reward_delta(self, delta, i):
-    #     dim = int(np.sqrt(len(self.irl_agent.env.state_list)))
-    #     data = np.reshape(delta, (dim, dim))
-    #
-    #     hm = sb.heatmap(data)
-    #     fig = hm.get_figure()
-    #     fig.savefig(self.reward_path + 'delta_' + str(i) + '.png')
-    #     fig.clf()
 
     def plot_cumulative_dists(self, i):
         plt.plot(range(i), self.cumulative_dists[:i])
