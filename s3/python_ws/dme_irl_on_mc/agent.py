@@ -142,7 +142,7 @@ class IRLAgent:
 
     ###############################################
 
-    def calculate_emp_fc(self):
+    def calculate_emp_fc_(self):
         cumulative_emp_fc = np.zeros_like(self.emp_fc)
         trajectories = np.load(self.path + 'trajectories_of_ids.npy', encoding='bytes', allow_pickle=True)
         for trajectory in trajectories:
@@ -154,6 +154,28 @@ class IRLAgent:
 
         cumulative_emp_fc /= len(trajectories)  # normalization over all trajectories
         self.emp_fc = cumulative_emp_fc
+        # self.plot_emp_fc('empfc')
+        self.plot_in_state_space(self.emp_fc, path=self.output_directory_path+'empfc',
+                                 title='Empirical Feature Counts')
+
+    def calculate_emp_fc(self):
+        trajectories = np.load(self.path + 'trajectories_of_ids.npy', encoding='bytes', allow_pickle=True)
+        found = False
+        len_traj = 0
+        for trajectory in trajectories:
+            if not found:
+                if trajectory[0][0] == self.env.start_state_id:
+                    found = True
+
+                for state_action in trajectory:  # state_action: [state, action]
+                    self.emp_fc[state_action[0]] += 1
+                    len_traj += 1
+                break
+        if not found:
+            raise Exception('not a single trajectory with the same start')
+
+        self.emp_fc /= len_traj  # normalization over all trajectories
+
         # self.plot_emp_fc('empfc')
         self.plot_in_state_space(self.emp_fc, path=self.output_directory_path+'empfc',
                                  title='Empirical Feature Counts')
@@ -234,7 +256,7 @@ class IRLAgent:
                 path = path+str(ind)
         data = np.reshape(inp, self.env.shape)
         plt.figure(figsize=(20, 10))
-        hm = sb.heatmap(data.T)
+        hm = sb.heatmap(data.T, linewidths=0.1)
         hm.set_title(title)
         hm.set_xlabel(xlabel)
         hm.set_ylabel(ylabel)

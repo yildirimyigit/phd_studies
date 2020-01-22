@@ -23,6 +23,9 @@ class MCContMDP:
 
         self.generate_environment()
 
+        self.start_state_id = None
+        self.get_start_state()
+
     def generate_environment(self):
         if self.is_generated:
             self.states = self.load_np_file(self.data_path + "states.npy")
@@ -118,14 +121,15 @@ class MCContMDP:
         return min_ind
 
     def get_start_state(self):
-        s = np.array([np.random.uniform(low=-0.6, high=-0.4), 0])
-        closest = self.find_closest_state(s)
-
-        while np.all(self.transitions[closest, :, closest] == 1):
+        if self.start_state_id is None:
             s = np.array([np.random.uniform(low=-0.6, high=-0.4), 0])
-            closest = self.find_closest_state(s)
+            self.start_state_id = self.find_closest_state(s)
 
-        return np.array(closest)
+            while np.all(self.transitions[self.start_state_id, :, self.start_state_id] == 1):
+                s = np.array([np.random.uniform(low=-0.6, high=-0.4), 0])
+                self.start_state_id = self.find_closest_state(s)
+
+        return np.array(self.start_state_id)
 
     def get_goal_state(self):
         goal = []
