@@ -6,7 +6,7 @@
 """
 import numpy as np
 from gridworld_mdp import GridworldMDP
-from neural_network import MyNN, sigm, linear
+from neural_network import MyNN, sigm, linear, gaussian, relu
 
 import sys
 import seaborn as sb
@@ -18,8 +18,9 @@ class GridworldAgent:
     def __init__(self):
         self.env = GridworldMDP()
         # initializes nn with random weights
-        self.rew_nn = MyNN(nn_arch=(2, 32, 256, 32, 1),
-                           acts=[sigm, sigm, sigm, linear])
+        self.rew_nn = MyNN(nn_arch=(2, 8, 16, 32, 64, 16, 64, 128, 256, 128, 64, 16, 64, 32, 16, 8, 1),
+                           acts=[sigm, sigm, sigm, sigm, sigm, relu, sigm, gaussian, sigm, relu, sigm,
+                                 sigm, sigm, sigm, sigm, linear])
 
         # To output the results, the following are used
         self.output_directory_suffix = str(int(time.time()))
@@ -38,7 +39,7 @@ class GridworldAgent:
         self.initialize_rewards()
 
         # Variables used in calculations
-        self.vi_loop = 16
+        self.vi_loop = 64
         self.normalized_states = np.empty_like(self.env.states)
         self.v = np.empty((self.env.num_states, self.vi_loop), dtype=float)
         self.q = np.empty((self.env.num_states, self.env.num_actions), dtype=float)
@@ -47,7 +48,7 @@ class GridworldAgent:
         self.esvc = np.empty(self.env.num_states, dtype=float)
         self.esvc_mat = np.empty((self.env.num_states, self.vi_loop), dtype=float)
 
-        self.batch_size = 8
+        self.batch_size = 32
         self.batch_ids = np.zeros(self.batch_size)
 
         # to use in list compression

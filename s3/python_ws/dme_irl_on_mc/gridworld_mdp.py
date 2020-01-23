@@ -9,8 +9,8 @@ import numpy as np
 class GridworldMDP:
     def __init__(self):
         self.data_path = "data/gridworld/"
-        self.x_div = 4
-        self.y_div = 4
+        self.x_div = 8
+        self.y_div = 8
 
         self.shape = (self.x_div, self.y_div)
 
@@ -81,7 +81,7 @@ class GridworldMDP:
         return np.array(0)
 
     def get_goal_state(self):
-        return np.array(11)
+        return np.array(54)
 
     def save_np_file(self, filepath, m_array):
         np.save(filepath, m_array)

@@ -12,7 +12,7 @@ def generate_trajectories(mdp, path='data/gridworld/'):
     trajectories = []
     trajectories_of_ids = []
 
-    policy = [[0, 1], [1, 1], [2, 1], [3, 2], [7, 2], [11, 1]]
+    policy = [[0, 1], [1, 1], [2, 1], [3, 1], [4, 1], [5, 1], [6, 2], [14, 2], [22, 2], [30, 2], [38, 2], [46, 2]]
 
     trajectory = []
     trajectory_of_ids = []

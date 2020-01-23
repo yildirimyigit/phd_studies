@@ -15,14 +15,14 @@ import matplotlib.pyplot as plt
 class GridworldDME:
     def __init__(self):
         self.irl_agent = GridworldAgent()
-        self.iter_count = 10000
+        self.iter_count = 100000
 
         # self.losses = np.zeros((self.iter_count, len(self.irl_agent.emp_fc)))
         self.cumulative_dists = np.zeros(self.iter_count)
 
     def run(self):
 
-        lr = 5e-2
+        lr = 5e-3
         decay = 1e-8
 
         for i in range(self.iter_count):
@@ -62,6 +62,7 @@ class GridworldDME:
             self.irl_agent.plot_in_state_space(self.irl_agent.esvc, i, self.irl_agent.esvc_path,
                                                title='Expected State Visitation Counts')
             # self.save_esvc(i)
+            time.sleep(0.05)
 
             if i % 100 == 0:
                 try:
