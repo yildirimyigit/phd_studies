@@ -103,7 +103,7 @@ class IRLAgent:
         temp_policy = np.exp(self.advantage)
 
         self.fast_policy = np.array([temp_policy[i]/np.sum(temp_policy[i]) for i in range(len(temp_policy))])
-        self.fast_policy[goal_states] = 0
+        self.fast_policy[goal_states] = 1
         # self.plot_policy()
         # print("\n- IRLAgent.backward_pass")
 
