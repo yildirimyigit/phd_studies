@@ -113,12 +113,17 @@ def kl_divergence(p, q):
 
 
 # to be used in earth mover's (wasserstein) distance calculation
-def arr_to_sig(arr):
-    sig = np.empty((len(arr), 2), dtype=np.float32)
-    count = 0
-    for i in range(len(arr)):
-        sig[count] = np.array([arr[i], i])
-        count += 1
+def esvc_to_sig(esvc):
+    # Convert esvc to a signature for cv2.EMD
+    # cv2.EMD requires single-precision, floating-point input
+    sig = np.zeros((np.size(esvc), np.ndim(esvc)+1), dtype=np.float32)
+
+    row = 0
+    for i, x in np.ndenumerate(esvc):
+        sig[row, 0] = x
+        sig[row, 1:] = np.asarray(i)
+        row += 1
+
     return sig
 
 
