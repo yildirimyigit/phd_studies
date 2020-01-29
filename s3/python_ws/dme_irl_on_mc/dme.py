@@ -112,6 +112,16 @@ def kl_divergence(p, q):
     return np.sum(np.where(p != 0, p * np.log(p / q), 0))
 
 
+# to be used in earth mover's (wasserstein) distance calculation
+def arr_to_sig(arr):
+    sig = np.empty((len(arr), 2), dtype=np.float32)
+    count = 0
+    for i in range(len(arr)):
+        sig[count] = np.array([arr[i], i])
+        count += 1
+    return sig
+
+
 if __name__ == "__main__":
     dme = DME()
     dme.run()
