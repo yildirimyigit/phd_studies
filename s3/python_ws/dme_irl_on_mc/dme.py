@@ -6,6 +6,7 @@
 """
 
 import numpy as np
+import cv2
 from agent import IRLAgent
 
 import time
@@ -49,13 +50,17 @@ class DME:
             # loss = self.irl_agent.emp_fc - self.irl_agent.exp_fc()  # FAULTY exp_fc calculation
             diff = self.irl_agent.emp_fc - self.irl_agent.esvc
             print("Diff sum: ", repr(np.sum(np.abs(diff))))
-            dist = np.abs(diff)
-            # dist = np.power(diff, 2)
+
+            # wssd: wasserstein distance, flow: matrix of individual displacements
+            wssd, _, flow = cv2.EMD(esvc_to_sig(self.irl_agent.esvc), esvc_to_sig(self.irl_agent.emp_fc), cv2.DIST_L2)
+
+            # dist = np.abs(diff)
+            dist = flow_to_dist_arr(wssd, flow)
 
             lr = np.maximum(lr - decay, 1e-10)
             self.irl_agent.backpropagation_batch(dist, lr)
 
-            self.cumulative_dists[i] = np.sum(dist)
+            self.cumulative_dists[i] = np.sum(np.abs(dist))
             print("Distance:" + str(self.cumulative_dists[i])+"\n")
             self.plot_cumulative_dists(i)
             # self.irl_agent.plot_esvc_mat(self.irl_agent.esvc_path, i)
