@@ -127,6 +127,15 @@ def esvc_to_sig(esvc):
     return sig
 
 
+def flow_to_dist_arr(dist, flow):
+    num_states = len(flow)
+    loss = np.zeros(num_states)
+    for i in range(num_states):
+        loss[i] = dist * (np.sum(flow[:, i]) - np.sum(flow[i, :]))
+
+    return loss
+
+
 if __name__ == "__main__":
     dme = DME()
     dme.run()
