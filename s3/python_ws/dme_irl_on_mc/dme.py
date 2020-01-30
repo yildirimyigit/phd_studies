@@ -52,7 +52,9 @@ class DME:
             print("Diff sum: ", repr(np.sum(np.abs(diff))))
 
             # wssd: wasserstein distance, flow: matrix of individual displacements
-            wssd, _, flow = cv2.EMD(esvc_to_sig(self.irl_agent.esvc), esvc_to_sig(self.irl_agent.emp_fc), cv2.DIST_L2)
+            wssd, _, flow = cv2.EMD(esvc_to_sig(np.reshape(self.irl_agent.esvc, self.irl_agent.env.shape)),
+                                    esvc_to_sig(np.reshape(self.irl_agent.emp_fc, self.irl_agent.env.shape)),
+                                    cv2.DIST_L2)
 
             # dist = np.abs(diff)
             dist = flow_to_dist_arr(wssd, flow)
