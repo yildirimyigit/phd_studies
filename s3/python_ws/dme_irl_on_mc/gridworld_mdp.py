@@ -8,16 +8,18 @@ import numpy as np
 
 class GridworldMDP:
     def __init__(self):
-        self.data_path = "data/gridworld/"
         self.x_div = 8
         self.y_div = 8
 
         self.shape = (self.x_div, self.y_div)
-
         self.num_states = self.x_div * self.y_div
         self.num_actions = 4
 
-        self.is_generated = os.path.isfile(self.data_path + "actions.npy")
+        self.data_path = "data/gridworld/"
+        self.env_path = self.data_path + "env/" + \
+            str(self.x_div) + "-" + str(self.y_div) + "-" + str(self.num_actions) + "/"
+
+        self.is_generated = os.path.isfile(self.env_path + "actions.npy")
         self.states, self.actions, self.transitions = None, None, None
 
         self.generate_environment()
@@ -27,16 +29,16 @@ class GridworldMDP:
 
     def generate_environment(self):
         if self.is_generated:
-            self.states = self.load_np_file(self.data_path + "states.npy")
-            self.actions = self.load_np_file(self.data_path + "actions.npy")
-            self.transitions = self.load_np_file(self.data_path + "transitions.npy")
+            self.states = self.load_np_file(self.env_path + "states.npy")
+            self.actions = self.load_np_file(self.env_path + "actions.npy")
+            self.transitions = self.load_np_file(self.env_path + "transitions.npy")
         else:
             self.create_data()
             self.is_generated = True
 
     def create_data(self):
         try:
-            os.makedirs(self.data_path)
+            os.makedirs(self.env_path)
         except:
             pass
 
@@ -72,9 +74,9 @@ class GridworldMDP:
 
                 self.transitions[i, j, k] = 1
 
-        self.save_np_file(self.data_path + "states.npy", self.states)
-        self.save_np_file(self.data_path + "actions.npy", self.actions)
-        self.save_np_file(self.data_path + "transitions.npy", self.transitions)
+        self.save_np_file(self.env_path + "states.npy", self.states)
+        self.save_np_file(self.env_path + "actions.npy", self.actions)
+        self.save_np_file(self.env_path + "transitions.npy", self.transitions)
 
     def get_start_state(self):
         self.start_state_id = 0

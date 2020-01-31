@@ -8,7 +8,7 @@ from gridworld_mdp import GridworldMDP
 
 # Loads previously recorded demonstrations to create trajectories
 # :param e Environment object
-def generate_trajectories(mdp, path='data/gridworld/'):
+def generate_trajectories(mdp):
     trajectories = []
     trajectories_of_ids = []
 
@@ -26,8 +26,8 @@ def generate_trajectories(mdp, path='data/gridworld/'):
     trajectories.append(np.asarray(trajectory))
     trajectories_of_ids.append(trajectory_of_ids)
     print('')
-    np.save(path+'trajectories.npy', np.asarray(trajectories))
-    np.save(path+'trajectories_of_ids.npy', np.asarray(trajectories_of_ids))
+    np.save(mdp.env_path+'trajectories.npy', np.asarray(trajectories))
+    np.save(mdp.env_path+'trajectories_of_ids.npy', np.asarray(trajectories_of_ids))
 
 
 if __name__ == "__main__":
