@@ -159,7 +159,7 @@ class IRLAgent:
                                  title='Empirical Feature Counts')
 
     def calculate_emp_fc(self):
-        trajectories = np.load(self.path + 'trajectories_of_ids.npy', encoding='bytes', allow_pickle=True)
+        trajectories = np.load(self.env.env_path + 'trajectories_of_ids.npy', encoding='bytes', allow_pickle=True)
         found = False
         len_traj = 0
         for trajectory in trajectories:
