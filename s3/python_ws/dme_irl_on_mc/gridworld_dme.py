@@ -6,6 +6,7 @@
 """
 
 import numpy as np
+import cv2
 from gridworld_agent import GridworldAgent
 
 import time
@@ -22,7 +23,7 @@ class GridworldDME:
 
     def run(self):
 
-        lr = 5e-3
+        lr = 1e-1
         decay = 1e-8
 
         for i in range(self.iter_count):
@@ -49,8 +50,14 @@ class GridworldDME:
             # loss = self.irl_agent.emp_fc - self.irl_agent.exp_fc()  # FAULTY exp_fc calculation
             diff = self.irl_agent.emp_fc - self.irl_agent.esvc
             print("Diff sum: ", repr(np.sum(np.abs(diff))))
-            dist = np.abs(diff)
-            # dist = np.power(diff, 2)
+
+            # wssd: wasserstein distance, flow: matrix of individual displacements
+            wssd, _, flow = cv2.EMD(esvc_to_sig(np.reshape(self.irl_agent.esvc, self.irl_agent.env.shape)),
+                                    esvc_to_sig(np.reshape(self.irl_agent.emp_fc, self.irl_agent.env.shape)),
+                                    cv2.DIST_L2)
+
+            # dist = np.abs(diff)
+            dist = np.abs(flow_to_dist_arr(wssd, flow))
 
             lr = np.maximum(lr - decay, 1e-10)
             self.irl_agent.backpropagation_batch(dist, lr)
@@ -104,6 +111,30 @@ class GridworldDME:
 
 def kl_divergence(p, q):
     return np.sum(np.where(p != 0, p * np.log(p / q), 0))
+
+
+# to be used in earth mover's (wasserstein) distance calculation
+def esvc_to_sig(esvc):
+    # Convert esvc to a signature for cv2.EMD
+    # cv2.EMD requires single-precision, floating-point input
+    sig = np.zeros((np.size(esvc), np.ndim(esvc)+1), dtype=np.float32)
+
+    row = 0
+    for i, x in np.ndenumerate(esvc):
+        sig[row, 0] = x
+        sig[row, 1:] = np.asarray(i)
+        row += 1
+
+    return sig
+
+
+def flow_to_dist_arr(dist, flow):
+    num_states = len(flow)
+    loss = np.zeros(num_states)
+    for i in range(num_states):
+        loss[i] = dist * (np.sum(flow[:, i]) - np.sum(flow[i, :]))
+
+    return loss
 
 
 if __name__ == "__main__":
