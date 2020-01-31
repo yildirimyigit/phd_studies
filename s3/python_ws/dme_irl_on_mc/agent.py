@@ -162,17 +162,25 @@ class IRLAgent:
         trajectories = np.load(self.env.env_path + 'trajectories_of_ids.npy', encoding='bytes', allow_pickle=True)
         found = False
         len_traj = 0
-        for trajectory in trajectories:
-            if not found:
-                if trajectory[0][0] == self.env.start_state_id:
-                    found = True
 
-                for state_action in trajectory:  # state_action: [state, action]
-                    self.emp_fc[state_action[0]] += 1
-                    len_traj += 1
-                break
-        if not found:
-            raise Exception('not a single trajectory with the same start')
+        while not found:
+            for trajectory in trajectories:
+                if not found:
+                    if trajectory[0][0] != self.env.start_state_id:
+                        continue
+                    else:
+                        found = True
+
+                        for state_action in trajectory:  # state_action: [state, action]
+                            self.emp_fc[state_action[0]] += 1
+                            len_traj += 1
+                        break
+
+            if not found:
+                print("No trajectory with start state: {0}", self.env.start_state_id)
+                # reassigning start state to match a trajectory
+                self.env.start_state_id = None
+                self.env.get_start_state()
 
         self.emp_fc /= len_traj  # normalization over all trajectories
 
