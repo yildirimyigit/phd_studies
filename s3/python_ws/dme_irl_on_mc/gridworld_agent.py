@@ -137,20 +137,13 @@ class GridworldAgent:
     ###############################################
 
     def calculate_emp_fc(self):
-        trajectories = np.load(self.env.data_path + 'trajectories_of_ids.npy', encoding='bytes', allow_pickle=True)
-        found = False
+        trajectories = np.load(self.env.env_path + 'trajectories_of_ids.npy', encoding='bytes', allow_pickle=True)
         len_traj = 0
         for trajectory in trajectories:
-            if not found:
-                if trajectory[0][0] == self.env.start_state_id:
-                    found = True
-
+            if trajectory[0][0] == self.env.start_state_id:
                 for state_action in trajectory:  # state_action: [state, action]
                     self.emp_fc[state_action[0]] += 1
                     len_traj += 1
-                break
-        if not found:
-            raise Exception('not a single trajectory with the same start')
 
         self.emp_fc /= len_traj  # normalization over all trajectories
 
