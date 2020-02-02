@@ -10,7 +10,7 @@ import gym
 class MCContMDP:
     def __init__(self):
         self.x_div = 120
-        self.v_div = 80
+        self.v_div = 40
 
         self.shape = (self.x_div, self.v_div)
 

@@ -33,7 +33,8 @@ class GridworldDME:
             self.irl_agent.reward_batch()
 
             self.irl_agent.save_reward(i)
-            self.irl_agent.plot_reward(i)
+            if i < 100 or i % 100 == 0:
+                self.irl_agent.plot_reward(i)
             # self.plot_reward2(i)
 
             # solve mdp wrt current reward
@@ -66,8 +67,9 @@ class GridworldDME:
             print("Distance:" + str(self.cumulative_dists[i])+"\n")
             self.plot_cumulative_dists(i)
             # self.irl_agent.plot_esvc_mat(self.irl_agent.esvc_path, i)
-            self.irl_agent.plot_in_state_space(self.irl_agent.esvc, i, self.irl_agent.esvc_path,
-                                               title='Expected State Visitation Counts')
+            if i % 100 == 0:
+                self.irl_agent.plot_in_state_space(self.irl_agent.esvc, i, self.irl_agent.esvc_path,
+                                                   title='Expected State Visitation Counts')
             # self.save_esvc(i)
             time.sleep(0.05)
 
