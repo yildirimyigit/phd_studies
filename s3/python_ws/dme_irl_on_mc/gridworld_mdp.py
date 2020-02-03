@@ -27,6 +27,8 @@ class GridworldMDP:
         self.start_state_id = None
         self.get_start_state()
 
+        self.pits = []
+
     def generate_environment(self):
         if self.is_generated:
             self.states = self.load_np_file(self.env_path + "states.npy")
@@ -84,6 +86,9 @@ class GridworldMDP:
 
     def get_goal_state(self):
         return np.array(54)
+
+    def get_coord(self, state):
+        return int(state % self.y_div), int(state / self.y_div)
 
     def save_np_file(self, filepath, m_array):
         np.save(filepath, m_array)
