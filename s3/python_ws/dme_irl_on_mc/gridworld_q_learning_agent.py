@@ -14,10 +14,10 @@ import matplotlib.patches as patches
 class GridworldQLearning:
     def __init__(self):
         self.env = GridworldMDP()
-        self.episode = 10000
+        self.episode = 20000
         self.learning_rate = 0.9
         self.gamma = 0.9
-        self.epsilon = 0.1  # epsilon-greedy
+        self.epsilon = 0.25  # epsilon-greedy
 
         self.env_start = self.env.get_start_state()
         self.env_goal = self.env.get_goal_state()
@@ -65,14 +65,12 @@ class GridworldQLearning:
         fig, ax = plt.subplots(1, 1, figsize=(self.env.y_div * 2, self.env.x_div * 2))
         ax.set_xlim(0, self.env.y_div)
         ax.set_ylim(0, self.env.x_div)
-        # plt.xticks(np.arange(0.5, self.env.y_div + 0.5, 1), [str(i) for i in range(1, self.env.y_div + 1)])
-        # plt.yticks(np.arange(0.5, self.env.x_div + 0.5, 1), [str(i) for i in range(1, self.env.x_div + 1)])
+        plt.xticks(np.arange(0.5, self.env.y_div + 0.5, 1), [str(i) for i in range(self.env.y_div)])
+        plt.yticks(np.arange(self.env.x_div - 0.5, -0.5, -1), [str(i) for i in range(self.env.x_div)])
 
-        plt.xticks(np.arange(self.env.y_div + 0.5, 0.5, -1), [str(i) for i in range(self.env.y_div)])
-        plt.yticks(np.arange(self.env.x_div + 0.5, 0.5, -1), [str(i) for i in range(self.env.x_div)])
-
-        ax.add_patch(patches.Rectangle(self.env.get_coord(self.env_goal), 1, 1, color="darkred"))
-        ax.add_patch(patches.Rectangle((0, 0), 1, 1, color="lightgreen"))  # 0, 0 starting cell
+        goal_x, goal_y = self.env.get_coord(self.env_goal)
+        ax.add_patch(patches.Rectangle((goal_x, self.env.y_div - goal_y - 1), 1, 1, color="darkred"))
+        ax.add_patch(patches.Rectangle((0, self.env.y_div - 1), 1, 1, color="lightgreen"))  # 0, 0 starting cell
         for state in self.env.pits:
             coord = self.env.get_coord(state)
             ax.add_patch(patches.Rectangle(coord, 1, 1, color="gray"))
@@ -91,18 +89,18 @@ class GridworldQLearning:
 
         for j in range(self.env.y_div):
             for i in range(self.env.x_div):
-                s = j * self.env.x_div + i
-                if not s == self.env_goal:
+                if i != goal_x or j != goal_y:
+                    s = j * self.env.x_div + i
                     for a in range(self.env.num_actions):
                         if a in np.argwhere(self.q[s, :] == np.amax(self.q[s, :])):
-                            ax.text(i + 1 + offset[a][0], j + 1 + offset[a][1], '%.1f' % self.q[s, a],
+                            ax.text(i + 1 + offset[a][0], self.env.y_div - j + offset[a][1], '%.1f' % self.q[s, a],
                                     fontdict=fonts[1])
                         else:
-                            ax.text(i + 1 + offset[a][0], j + 1 + offset[a][1], '%.1f' % self.q[s, a],
+                            ax.text(i + 1 + offset[a][0], self.env.y_div - j + offset[a][1], '%.1f' % self.q[s, a],
                                     fontdict=fonts[0])
 
         plt.savefig(self.env.env_path + 'q.png')
-        plt.show(block=True)
+        # plt.show(block=True)
 
 
 if __name__ == "__main__":
