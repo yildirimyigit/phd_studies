@@ -102,8 +102,13 @@ class GridworldQLearning:
         plt.savefig(self.env.env_path + 'q.png')
         # plt.show(block=True)
 
+    def save_policy(self):
+        policy = self.q / np.reshape(np.sum(self.q, axis=1), (self.env.num_states, 1))
+        np.save(self.env.env_path + 'policy.npy', policy)
+
 
 if __name__ == "__main__":
     gq = GridworldQLearning()
     gq.qlearn()
     gq.plot_q()
+    gq.save_policy()
