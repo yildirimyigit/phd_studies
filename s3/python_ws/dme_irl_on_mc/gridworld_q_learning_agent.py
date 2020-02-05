@@ -14,7 +14,7 @@ import matplotlib.patches as patches
 class GridworldQLearning:
     def __init__(self):
         self.env = GridworldMDP()
-        self.episode = 20000
+        self.episode = 25000
         self.learning_rate = 0.9
         self.gamma = 0.9
         self.epsilon = 0.25  # epsilon-greedy
@@ -103,7 +103,9 @@ class GridworldQLearning:
         # plt.show(block=True)
 
     def save_policy(self):
-        policy = self.q / np.reshape(np.sum(self.q, axis=1), (self.env.num_states, 1))
+        q = self.q.copy()
+        q[q<0] = 0
+        policy = q / np.reshape(np.sum(q, axis=1), (self.env.num_states, 1))
         np.save(self.env.env_path + 'policy.npy', policy)
 
 
