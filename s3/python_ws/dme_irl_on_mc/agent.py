@@ -231,7 +231,7 @@ class IRLAgent:
                 path = path+str(ind)
         data = np.reshape(inp, self.env.shape)
         plt.figure(figsize=(20, 6))
-        hm = sb.heatmap(data.T, linewidths=0.05)
+        hm = sb.heatmap(data.T, linewidths=0.025, linecolor='silver')
         hm.set_title(title)
         hm.set_xlabel(xlabel)
         hm.set_ylabel(ylabel)
