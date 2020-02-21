@@ -34,8 +34,18 @@ def generate_trajectories(mdp):
 # #          [[0, 1], [1, 2], [9, 1], [10, 2], [18, 1], [19, 2], [27, 1], [28, 2], [36, 1], [37, 2], [45, 1], [46, 2]],
 # #          [[0, 2], [8, 1], [9, 2], [17, 2], [25, 2], [33, 1], [34, 1], [35, 2], [43, 1], [44, 1], [45, 1], [46, 2]]]
 
-    num_dems = 20
-    demonstrations = produce_demonstrations(mdp, np.load(mdp.env_path + 'policy.npy'), num_dems)
+    # num_dems = 20
+    # demonstrations = produce_demonstrations(mdp, np.load(mdp.env_path + 'policy.npy'), num_dems)
+
+    num_dems = 1
+    # demonstrations = [[[0, 1], [1, 1], [2, 1], [3, 1], [4, 1], [5, 1], [6, 2], [14, 2], [22, 2], [30, 2], [38, 2],
+    #                    [46, 2]]]
+    # demonstrations = [[[0, 1], [1, 1], [2, 1], [3, 1], [4, 1], [5, 1], [6, 2], [14, 2], [22, 2], [30, 2], [38, 2],
+    #                    [46, 2]], [[0, 2], [8, 2], [16, 2], [24, 2], [32, 2], [40, 2], [48, 1], [49, 1], [50, 1],
+    #                               [51, 1], [52, 1], [53, 1]]]
+
+    demonstrations = [[[0, 2], [8, 2], [16, 2], [24, 2], [32, 2], [40, 2], [48, 1], [49, 1], [50, 1], [51, 1], [52, 1],
+                       [53, 1]]]
 
     for ind_policy in demonstrations:
         trajectory = []
