@@ -44,8 +44,18 @@ class IRLAgent:
         # self.esvc_file = open(self.esvc_path + 'esvc.txt', "a+")
         # self.policy_file = open(self.irl_agent.output_directory_path + 'policy.txt', "a+")
 
+        self.batch_size = 128
+        self.batch_ids = np.zeros(self.batch_size)
+
+        # to use in list compression
+        self.cur_loop_ctr = 0
+
+        self.mean_trajectory_length = 0
+        self.emp_fc = np.zeros(len(self.env.states))
+        self.calculate_emp_fc()
+
         # Variables used in calculations
-        self.vi_loop = 200
+        self.vi_loop = self.mean_trajectory_length
         self.normalized_states = np.empty_like(self.env.states)
         self.v = np.empty((len(self.env.states), self.vi_loop), dtype=float)
         self.q = np.empty((len(self.env.states), len(self.env.actions)), dtype=float)
@@ -53,15 +63,6 @@ class IRLAgent:
         self.fast_policy = np.empty((len(self.env.states), len(self.env.actions)), dtype=float)
         self.esvc = np.empty(len(self.env.states), dtype=float)
         self.esvc_mat = np.empty((len(self.env.states), self.vi_loop), dtype=float)
-
-        self.batch_size = 128
-        self.batch_ids = np.zeros(self.batch_size)
-
-        # to use in list compression
-        self.cur_loop_ctr = 0
-
-        self.emp_fc = np.zeros(len(self.env.states))
-        self.calculate_emp_fc()
 
         self.mc_normalized_states()
 
@@ -162,6 +163,7 @@ class IRLAgent:
         trajectories = np.load(self.env.env_path + 'trajectories_of_ids.npy', encoding='bytes', allow_pickle=True)
         found = False
         len_traj = 0
+        trajectory_lengths = []
 
         while not found:
             for trajectory in trajectories:
@@ -174,6 +176,7 @@ class IRLAgent:
                         for state_action in trajectory:  # state_action: [state, action]
                             self.emp_fc[state_action[0]] += 1
                             len_traj += 1
+                        trajectory_lengths.append(len_traj)
                         break
 
             if not found:
@@ -183,6 +186,8 @@ class IRLAgent:
                 self.env.get_start_state()
 
         self.emp_fc /= len_traj  # normalization over all trajectories
+
+        self.mean_trajectory_length = int(np.ceil(np.average(trajectory_lengths)))
 
         # self.plot_emp_fc('empfc')
         self.plot_in_state_space(self.emp_fc, path=self.output_directory_path+'empfc',
