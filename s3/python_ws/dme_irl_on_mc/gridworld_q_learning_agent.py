@@ -14,13 +14,29 @@ import matplotlib.patches as patches
 class GridworldQLearning:
     def __init__(self):
         self.env = GridworldMDP()
-        self.episode = 25000
+        self.episode = 30000
         self.learning_rate = 0.9
         self.gamma = 0.9
         self.epsilon = 0.25  # epsilon-greedy
 
         self.env_start = self.env.get_start_state()
         self.env_goal = self.env.get_goal_state()
+
+        # when recovering the policy, we use the estimated rewards
+        self.is_recovering = True
+        self.state_rewards = np.array([-34.2453559869, -34.2453559869, -34.2453559869, -34.2453559869, -34.24143899,
+                                       -34.2453559869, -34.24143899, -34.2453559869, -34.2453559869, -34.2453559869,
+                                       -34.2453559869, -34.2375259247, -34.2337007264, -34.2453559869, -34.2453559869,
+                                       -34.2375259247, -34.2453559869, -34.24143899, -34.24143899, -34.2453559869,
+                                       -34.2453559869, -34.2337007264, -34.2453559869, -34.24143899, -34.2453559869,
+                                       -34.24143899, -34.2453559869, -34.2453559869, -34.2453559869, -34.24143899,
+                                       -34.2297868444, -34.2453559869, -34.2453559869, -34.2297868444, -34.2453559869,
+                                       -34.2453559869, -34.24143899, -34.24143899, -34.2218306584, -34.2375259247,
+                                       -34.24143899, -34.2453559869, -34.2375259247, -34.24143899, -34.2297868444,
+                                       -34.2375259247, -34.2453559869, -34.2337007264, -34.2337007264, -34.24143899,
+                                       -34.24143899, -34.2453559869, -34.2453559869, -34.2453559869, -34.2453559869,
+                                       -34.2453559869, -34.2453559869, -34.2453559869, -34.2337007264, -34.24143899,
+                                       -34.24143899, -34.2337007264, -34.2337007264, -34.2375259247])
 
         # initialization of q matrix
         self.q = np.random.rand(self.env.num_states, self.env.num_actions)/100.0
@@ -55,7 +71,7 @@ class GridworldQLearning:
 
     def act(self, s, a):
         s_new = np.where(self.env.transitions[s, a, :] == 1)[0][0]
-        r = 100 if s_new == self.env_goal else -1
+        r = self.get_reward(s_new)
         return s_new, r
 
     def plot_q(self):
@@ -99,14 +115,24 @@ class GridworldQLearning:
                             ax.text(i + 1 + offset[a][0], self.env.y_div - j + offset[a][1], '%.1f' % self.q[s, a],
                                     fontdict=fonts[0])
 
-        plt.savefig(self.env.env_path + 'q.png')
+        q_suffix = 'q_rec.png' if self.is_recovering else 'q.png'
+
+        plt.savefig(self.env.env_path + q_suffix)
         # plt.show(block=True)
 
     def save_policy(self):
         q = self.q.copy()
-        q[q<0] = 0
+        q[q < 0] = 0
         policy = q / np.reshape(np.sum(q, axis=1), (self.env.num_states, 1))
         np.save(self.env.env_path + 'policy.npy', policy)
+
+    def get_reward(self, s):
+        if not self.is_recovering:
+            r = 100 if s == self.env_goal else -1
+        else:
+            r = self.state_rewards[s]
+
+        return r
 
 
 if __name__ == "__main__":
