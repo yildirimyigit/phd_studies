@@ -35,6 +35,7 @@ class IRLAgent:
         self.output_directory_path = self.path + 'output/' + self.output_directory_suffix + "/"
         self.videodir = self.output_directory_path + "video/"
         self.reward_path = self.output_directory_path + 'reward/'
+        self.rewards_np_path = self.reward_path + 'rewards.npy'
         self.esvc_path = self.output_directory_path + 'esvc/'
         os.makedirs(self.output_directory_path)
         os.makedirs(self.videodir)
@@ -255,6 +256,9 @@ class IRLAgent:
 
         self.rewards_file.write("] \n")
         self.rewards_file.flush()
+
+        # saving the last rewards, updating every iteration
+        np.save(self.rewards_np_path, self.state_rewards)
 
     # def save_q(self, q, ind):
     #     self.q_file.write(str(ind) + "\n")
