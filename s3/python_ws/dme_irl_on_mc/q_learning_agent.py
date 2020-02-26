@@ -34,23 +34,30 @@ class MCContQLearning:
 
         self.episode_rewards = np.zeros(self.episode)
 
+        self.gym_env = gym.make('MountainCarContinuous-v0')
+        self.gym_env = gym.wrappers.Monitor(self.gym_env, self.env.env_path + "video/" + str(time()),
+                                            video_callable=lambda episode_id: False)
+        self.gym_env.reset()
+
     def qlearn(self):
         for i in tqdm(range(self.episode)):
-            state = self.env_start
-            num_steps, reward, chosen_action, prev_state = 0, 0, 0, 0
+            self.gym_env.reset()
+            state = self.env.find_closest_state(self.gym_env.unwrapped.state)
+            num_steps, reward, chosen_action, prev_state, done = 0, 0, 0, 0, False
 
-            while (state in self.env_goal) and (num_steps < 3000):  # finish episode when goal reached or max 3000 steps
+            # finish episode when goal reached or max 10000 steps
+            while (not done) and (state not in self.env_goal) and (num_steps < 10000):
                 prev_state = state
                 chosen_action = self.choose_action(state)
                 if np.random.rand() < self.epsilon:  # epsilon-greedy
                     chosen_action = np.random.choice(range(self.env.num_actions))
-                state, reward = self.act(state, chosen_action)
+                state, reward, done = self.act(chosen_action)
                 self.episode_rewards[i] += reward
                 self.q[prev_state][chosen_action] = self.q[prev_state][chosen_action] + self.learning_rate * \
                     (reward + self.gamma * np.max(self.q[state][:]) - self.q[prev_state][chosen_action])
                 num_steps += 1
 
-            if state != self.env_goal:  # if hit max_steps
+            if state not in self.env_goal:  # if hit max_steps
                 reward = -10000
 
             self.episode_rewards[i] += reward
@@ -61,10 +68,11 @@ class MCContQLearning:
         return np.argmax(self.q[state][:])
         # np.random.choice(range(len(self.env.actions)), 1, self.fast_policy[current_s, :].tolist())[0]
 
-    def act(self, s, a):
-        s_new = np.where(self.env.transitions[s, a, :] == 1)[0][0]
+    def act(self, action_id):
+        next_s, _, done, _ = self.gym_env.step(np.array([self.env.actions[action_id]]))
+        s_new = self.env.find_closest_state(next_s)
         r = self.get_reward(s_new)
-        return s_new, r
+        return s_new, r, done
 
     def plot_q(self):
         fonts = [{'family': 'monospace', 'color': 'k', 'weight': 'normal', 'size': 10},
