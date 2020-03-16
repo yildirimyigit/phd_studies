@@ -56,7 +56,7 @@ class IRLAgent:
         self.calculate_emp_fc()
 
         # Variables used in calculations
-        self.vi_loop = self.mean_trajectory_length
+        self.vi_loop = 66  # self.mean_trajectory_length
         self.normalized_states = np.empty_like(self.env.states)
         self.v = np.empty((len(self.env.states), self.vi_loop), dtype=float)
         self.q = np.empty((len(self.env.states), len(self.env.actions)), dtype=float)

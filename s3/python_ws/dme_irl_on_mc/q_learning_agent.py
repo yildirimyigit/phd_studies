@@ -17,7 +17,7 @@ import gym
 class MCContQLearning:
     def __init__(self):
         self.env = MCContMDP()
-        self.episode = 100000
+        self.episode = 10000
         self.learning_rate = 0.9
         self.gamma = 0.9
         self.epsilon = 0.25  # epsilon-greedy
@@ -46,7 +46,7 @@ class MCContQLearning:
             num_steps, reward, chosen_action, prev_state, done = 0, 0, 0, 0, False
 
             # finish episode when goal reached or max 10000 steps
-            while (not done) and (state not in self.env_goal) and (num_steps < 10000):
+            while (not done) and (state not in self.env_goal) and (num_steps < 5000):
                 prev_state = state
                 chosen_action = self.choose_action(state)
                 if np.random.rand() < self.epsilon:  # epsilon-greedy
