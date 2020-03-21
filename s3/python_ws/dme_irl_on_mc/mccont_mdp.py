@@ -11,18 +11,20 @@ class MCContMDP:
     def __init__(self):
         self.x_div = 120
         self.v_div = 40
+        self.t_div = 100
 
         self.shape = (self.x_div, self.v_div)
 
         self.num_states = self.x_div * self.v_div
+        self.num_t_states = self.num_states * self.t_div
         self.num_actions = 3
 
         self.data_path = "data/mccont/"
-        self.env_path = self.data_path + "env/" + \
-            str(self.x_div) + "-" + str(self.v_div) + "-" + str(self.num_actions) + "/"
+        self.env_path = self.data_path + "env/s:" + \
+            str(self.x_div) + "-" + str(self.v_div) + "-" + str(self.t_div) + "-a:" + str(self.num_actions) + "/"
 
         self.is_generated = os.path.isfile(self.env_path + "actions.npy")
-        self.states, self.actions, self.transitions = None, None, None
+        self.states, self.actions, self.transitions, self.t_states, = None, None, None, None
 
         self.generate_environment()
 
@@ -34,6 +36,7 @@ class MCContMDP:
             self.states = self.load_np_file(self.env_path + "states.npy")
             self.actions = self.load_np_file(self.env_path + "actions.npy")
             self.transitions = self.load_np_file(self.env_path + "transitions.npy")
+            self.t_states = self.load_np_file(self.env_path + "t_states.npy")
         else:
             self.create_data()
             self.is_generated = True
@@ -48,6 +51,7 @@ class MCContMDP:
         self.states = np.zeros((self.num_states, 2))
         self.actions = np.zeros((self.num_actions, 1))
         self.transitions = np.zeros((self.num_states, self.num_actions, self.num_states))
+        self.t_states = np.zeros((self.num_t_states, 3))
 
         min_act = env.unwrapped.min_action
         max_act = env.unwrapped.max_action
@@ -92,9 +96,13 @@ class MCContMDP:
                 self.transitions[i, j, k] = 1
 
         env.close()
+
+        self.t_states = np.repeat(self.states[np.newaxis, :, :], self.t_div, axis=0)
+
         self.save_np_file(self.env_path + "states.npy", self.states)
         self.save_np_file(self.env_path + "actions.npy", self.actions)
         self.save_np_file(self.env_path + "transitions.npy", self.transitions)
+        self.save_np_file(self.env_path + "t_states.npy", self.t_states)
 
     def save_np_file(self, filepath, m_array):
         np.save(filepath, m_array)
