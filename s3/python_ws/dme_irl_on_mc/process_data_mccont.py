@@ -22,6 +22,8 @@ def generate_trajectories(mdp, path='data/mccont/'):
             trajectory_of_ids = []
             trajectory_of_tids = []
             step = 0
+            is_longer_than_max_time = False
+
             for state_action in demonstration:
                 sid = mdp.find_closest_state(np.array([state_action[0][0], state_action[0][1]]))
                 aid = mdp.find_closest_action(np.array(state_action[1][0]))
@@ -32,9 +34,16 @@ def generate_trajectories(mdp, path='data/mccont/'):
                 trajectory_of_ids.append([sid, aid])
                 trajectory_of_tids.append([t_sid, aid])
                 step += 1
-            trajectories.append(np.asarray(trajectory))
-            trajectories_of_ids.append(trajectory_of_ids)
-            trajectories_of_tids.append(trajectory_of_tids)
+                if step >= mdp.t_div:   # Demonstration does not finish in mdp.t_div steps, so I eliminate them below
+                    is_longer_than_max_time = True
+
+            if is_longer_than_max_time:
+                continue
+            else:
+                trajectories.append(np.asarray(trajectory))
+                trajectories_of_ids.append(trajectory_of_ids)
+                trajectories_of_tids.append(trajectory_of_tids)
+
         print('')
     np.save(mdp.env_path+'trajectories.npy', np.asarray(trajectories))
     np.save(mdp.env_path+'trajectories_of_ids.npy', np.asarray(trajectories_of_ids))
