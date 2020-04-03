@@ -32,8 +32,8 @@ class DME:
 
             self.irl_agent.reward_batch()
 
-            self.irl_agent.save_reward(i)
-            self.irl_agent.plot_reward(i)
+            # self.irl_agent.save_reward(i)
+            # self.irl_agent.plot_reward(i)
             # self.plot_reward2(i)
 
             # solve mdp wrt current reward

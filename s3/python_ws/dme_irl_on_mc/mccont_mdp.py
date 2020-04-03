@@ -9,11 +9,12 @@ import gym
 
 class MCContMDP:
     def __init__(self):
-        self.x_div = 120
-        self.v_div = 40
+        self.x_div = 60
+        self.v_div = 30
         self.t_div = 100
 
         self.shape = (self.x_div, self.v_div)
+        self.t_shape = (self.t_div, self.x_div, self.v_div)
 
         self.num_states = self.x_div * self.v_div
         self.num_t_states = self.num_states * self.t_div
@@ -24,7 +25,7 @@ class MCContMDP:
             str(self.x_div) + "-" + str(self.v_div) + "-" + str(self.t_div) + "-a:" + str(self.num_actions) + "/"
 
         self.is_generated = os.path.isfile(self.env_path + "actions.npy")
-        self.states, self.actions, self.transitions, self.t_states, = None, None, None, None
+        self.states, self.actions, self.transitions, self.t_states = None, None, None, None
 
         self.generate_environment()
 
@@ -97,7 +98,9 @@ class MCContMDP:
 
         env.close()
 
-        self.t_states = np.repeat(self.states[np.newaxis, :, :], self.t_div, axis=0)
+        for sid in range(self.num_states):
+            for t in range(self.t_div):
+                self.t_states[sid * self.t_div + t] = [self.states[sid, 0], self.states[sid, 1], t]
 
         self.save_np_file(self.env_path + "states.npy", self.states)
         self.save_np_file(self.env_path + "actions.npy", self.actions)
@@ -133,13 +136,17 @@ class MCContMDP:
 
     def get_start_state(self):
         if self.start_state_id is None:
+            print('get_start_state+')
             s = np.array([np.random.uniform(low=-0.6, high=-0.4), 0])
             self.start_state_id = self.find_closest_state(s)
 
+            # redo if trapping state, bad implementation here
             while np.all(self.transitions[self.start_state_id, :, self.start_state_id] == 1):
+                print('++get_start_state')
                 s = np.array([np.random.uniform(low=-0.6, high=-0.4), 0])
                 self.start_state_id = self.find_closest_state(s)
 
+        print('get_start_state-')
         return np.array(self.start_state_id)
 
     def get_goal_state(self):
