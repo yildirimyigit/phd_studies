@@ -10,6 +10,7 @@ from neural_network import MyNN, sigm, linear, gaussian
 
 import sys
 import seaborn as sb
+from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import os
 import time
@@ -22,10 +23,10 @@ class IRLAgent:
     def __init__(self):
         self.env = MCContMDP()
         # initializes nn with random weights
-        self.rew_nn = MyNN(nn_arch=(2, 8, 16, 32, 64, 16, 64, 32, 64, 32, 64, 16, 64, 32, 16, 8, 1),
+        self.rew_nn = MyNN(nn_arch=(3, 8, 16, 32, 64, 16, 64, 32, 64, 32, 64, 16, 64, 32, 16, 8, 1),
                            acts=[sigm, sigm, sigm, sigm, sigm, sigm, sigm, gaussian, sigm, sigm, sigm,
                                  sigm, sigm, sigm, sigm, linear])
-        self.state_rewards = np.empty(len(self.env.states), dtype=float)
+        self.state_rewards = np.empty(len(self.env.t_states), dtype=float)
         self.initialize_rewards()
 
         # To output the results, the following are used
@@ -52,18 +53,18 @@ class IRLAgent:
         self.cur_loop_ctr = 0
 
         self.mean_trajectory_length = 0
-        self.emp_fc = np.zeros(len(self.env.states))
+        self.emp_fc = np.zeros(self.env.num_t_states)
         self.calculate_emp_fc()
 
         # Variables used in calculations
-        self.vi_loop = 66  # self.mean_trajectory_length
-        self.normalized_states = np.empty_like(self.env.states)
-        self.v = np.empty((len(self.env.states), self.vi_loop), dtype=float)
-        self.q = np.empty((len(self.env.states), len(self.env.actions)), dtype=float)
-        self.advantage = np.empty((len(self.env.states), len(self.env.actions)), dtype=float)
-        self.fast_policy = np.empty((len(self.env.states), len(self.env.actions)), dtype=float)
-        self.esvc = np.empty(len(self.env.states), dtype=float)
-        self.esvc_mat = np.empty((len(self.env.states), self.vi_loop), dtype=float)
+        self.vi_loop = self.env.t_div  # self.mean_trajectory_length
+        self.normalized_states = np.empty_like(self.env.t_states)
+        self.v = np.empty((len(self.env.t_states), self.vi_loop), dtype=float)
+        self.q = np.empty((len(self.env.t_states), len(self.env.actions)), dtype=float)
+        self.advantage = np.empty((len(self.env.t_states), len(self.env.actions)), dtype=float)
+        self.fast_policy = np.empty((len(self.env.t_states), len(self.env.actions)), dtype=float)
+        self.esvc = np.empty(self.env.num_t_states, dtype=float)
+        self.esvc_mat = np.empty((self.env.num_t_states, self.vi_loop), dtype=float)
 
         self.mc_normalized_states()
 
@@ -74,18 +75,22 @@ class IRLAgent:
     def fast_backward_pass(self):
         # print("+ IRLAgent.backward_pass")
 
-        v = np.ones((len(self.env.states), 1)) * -sys.float_info.max
-        q = np.zeros((len(self.env.states), len(self.env.actions)))
+        v = np.ones((len(self.env.t_states), 1)) * -sys.float_info.max
+        q = np.zeros((len(self.env.t_states), len(self.env.actions)))
 
         goal_states = self.env.get_goal_state()
 
         for i in range(self.vi_loop-1):
             v[goal_states] = 0
-            for s in range(len(self.env.states)):
-                q[s, :] = np.matmul(self.env.transitions[s, :, :], v).T + self.state_rewards[s]
+            for s in range(self.env.num_states):
+                for t in range(self.env.t_div):
+                    t_states_begin_ind = self.env.num_states * t
+                    ts_ind = t_states_begin_ind + s
+                    st_ind = range(t_states_begin_ind, t_states_begin_ind + self.env.num_states)
+                    q[ts_ind, :] = np.matmul(self.env.transitions[s, :, :], v[st_ind]).T + self.state_rewards[ts_ind]
 
-            # v = softmax_a q
             # one problem: when np.sum(np.exp(q), axis=1) = 0, division by 0. In this case v = 0
+            # v = softmax_a q
             # expq = np.exp(q)
             # sumexpq = np.sum(expq, axis=1)
             # nonzero_ids = np.where(sumexpq != 0)
@@ -101,7 +106,7 @@ class IRLAgent:
         # self.save_q(q, ind)
         v[goal_states] = 0
         # current MaxEnt policy:
-        self.advantage = q - np.reshape(v, (len(self.env.states), 1))
+        self.advantage = q - np.reshape(v, (self.env.num_t_states, 1))
         temp_policy = np.exp(self.advantage)
 
         self.fast_policy = np.array([temp_policy[i]/np.sum(temp_policy[i]) for i in range(len(temp_policy))])
@@ -135,7 +140,7 @@ class IRLAgent:
     ###############################################
 
     def fast_calc_esvc_unnorm(self):
-        esvc_arr = [self.esvcind(i) for i in range(len(self.env.states))]
+        esvc_arr = [self.esvcind(i) for i in range(self.env.num_t_states)]
         return esvc_arr
 
     def esvcind(self, ind):
@@ -163,7 +168,6 @@ class IRLAgent:
     def calculate_emp_fc(self):
         trajectories = np.load(self.env.env_path + 'trajectories_of_ids.npy', encoding='bytes', allow_pickle=True)
         found = False
-        len_traj = 0
         trajectory_lengths = []
 
         while not found:
@@ -174,9 +178,9 @@ class IRLAgent:
                     else:
                         found = True
 
-                        for state_action in trajectory:  # state_action: [state, action]
-                            self.emp_fc[state_action[0]] += 1
-                            len_traj += 1
+                        for step, state_action in enumerate(trajectory):  # state_action: [state, action]
+                            self.emp_fc[step * self.env.num_states + state_action[0]] += 1
+                        len_traj = step + 1
                         trajectory_lengths.append(len_traj)
                         break
 
@@ -191,8 +195,8 @@ class IRLAgent:
         self.mean_trajectory_length = int(np.ceil(np.average(trajectory_lengths)))
 
         # self.plot_emp_fc('empfc')
-        self.plot_in_state_space(self.emp_fc, path=self.output_directory_path+'empfc',
-                                 title='Empirical Feature Counts')
+        self.plot_in_t_state_space(self.emp_fc, path=self.output_directory_path+'empfc',
+                                   title='Empirical Feature Counts')
 
     def policy(self, sid, aid):
         return np.exp(self.q[sid][aid] - self.v[sid, -1])   # last column in the v matrix
@@ -214,15 +218,17 @@ class IRLAgent:
         self.state_rewards = np.random.rand(len(self.state_rewards)) * 2 - 1
 
     def mc_normalized_states(self):
-        normalized_states = self.env.states.copy()
+        normalized_states = self.env.t_states.copy()
 
         min0 = np.min(normalized_states[:, 0])
         min1 = np.min(normalized_states[:, 1])
+        min2 = np.min(normalized_states[:, 2])
         max0 = np.max(normalized_states[:, 0])
         max1 = np.max(normalized_states[:, 1])
+        max2 = np.max(normalized_states[:, 2])
 
-        normalized_states -= [min0, min1]
-        normalized_states /= [max0-min0, max1-min1]
+        normalized_states -= [min0, min1, min2]
+        normalized_states /= [max0-min0, max1-min1, max2-min2]
 
         self.normalized_states = normalized_states * 2 - 1  # scaling the states between [-1, 1]
 
@@ -243,6 +249,37 @@ class IRLAgent:
         hm.set_ylabel(ylabel)
         fig = hm.get_figure()
         fig.savefig(path + '.png')
+        fig.clf()
+
+    def plot_in_t_state_space(self, inp, ind=-1, path="", xlabel='x', ylabel='v', zlabel='t', title=''):
+        if path == "":
+            path = self.output_directory_path
+        else:
+            if ind != -1:
+                path = path+str(ind)
+        data = np.reshape(inp, self.env.t_shape)
+
+        z = []
+        x, y = [], []
+        for step in range(self.env.t_div):
+            if np.any(data[step] > 0):
+                xi, yi = np.where(data[step] != 0)
+                x.append(xi[0])
+                y.append(yi[0])
+                z.append(step)
+            else:
+                break
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+
+        ax.scatter(x, y, z, c='r', marker='o')
+
+        ax.set_title(title)
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+        ax.set_zlabel(zlabel)
+        plt.savefig(path + '.png')
         fig.clf()
 
     def save_reward(self, nof_iter):
