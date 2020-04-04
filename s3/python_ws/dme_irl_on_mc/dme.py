@@ -52,12 +52,12 @@ class DME:
             print("Diff sum: ", repr(np.sum(np.abs(diff))))
 
             # wssd: wasserstein distance, flow: matrix of individual displacements
-            wssd, _, flow = cv2.EMD(esvc_to_sig(np.reshape(self.irl_agent.esvc, self.irl_agent.env.shape)),
-                                    esvc_to_sig(np.reshape(self.irl_agent.emp_fc, self.irl_agent.env.shape)),
-                                    cv2.DIST_L2)
+            # wssd, _, flow = cv2.EMD(esvc_to_sig(np.reshape(self.irl_agent.esvc, self.irl_agent.env.t_shape)),
+            #                         esvc_to_sig(np.reshape(self.irl_agent.emp_fc, self.irl_agent.env.t_shape)),
+            #                         cv2.DIST_L2)
 
-            # dist = np.abs(diff)
-            dist = flow_to_dist_arr(wssd, flow)
+            dist = np.abs(diff)
+            # dist = flow_to_dist_arr(wssd, flow)
 
             lr = np.maximum(lr - decay, 1e-10)
             self.irl_agent.backpropagation_batch(dist, lr)
@@ -66,8 +66,12 @@ class DME:
             print("Distance:" + str(self.cumulative_dists[i])+"\n")
             self.plot_cumulative_dists(i)
             # self.irl_agent.plot_esvc_mat(self.irl_agent.esvc_path, i)
-            self.irl_agent.plot_in_state_space(self.irl_agent.esvc, i, self.irl_agent.esvc_path,
-                                               title='Expected State Visitation Counts')
+            # self.irl_agent.plot_in_state_space(self.irl_agent.esvc, i, self.irl_agent.esvc_path,
+            #                                    title='Expected State Visitation Counts')
+
+            self.irl_agent.plot_in_t_state_space(self.irl_agent.esvc, ind=i, path=self.irl_agent.esvc_path,
+                                                 title='Empirical Feature Counts')
+
             # self.save_esvc(i)
 
             if i % 100 == 0:

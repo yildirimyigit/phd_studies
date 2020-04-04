@@ -57,7 +57,7 @@ class IRLAgent:
         self.calculate_emp_fc()
 
         # Variables used in calculations
-        self.vi_loop = self.env.t_div  # self.mean_trajectory_length
+        self.vi_loop = self.env.t_div - 1  # self.mean_trajectory_length
         self.normalized_states = np.empty_like(self.env.t_states)
         self.v = np.empty((len(self.env.t_states), self.vi_loop), dtype=float)
         self.q = np.empty((len(self.env.t_states), len(self.env.actions)), dtype=float)
@@ -123,7 +123,7 @@ class IRLAgent:
         goal_states = self.env.get_goal_state()
 
         self.esvc_mat[:] = 0
-        self.esvc_mat[start_states, :] = 1
+        self.esvc_mat[start_states, 0] = 1/len(np.atleast_1d(start_states))
         for loop_ctr in range(self.vi_loop-1):
             self.cur_loop_ctr = loop_ctr
             self.esvc_mat[goal_states, loop_ctr] = 0
@@ -140,11 +140,18 @@ class IRLAgent:
     ###############################################
 
     def fast_calc_esvc_unnorm(self):
-        esvc_arr = [self.esvcind(i) for i in range(self.env.num_t_states)]
-        return esvc_arr
+        starting_tid = self.cur_loop_ctr*self.env.num_states
+        # exploiting temporal limits: t = self.cur_loop_ctr so only the range below is relevant
+        corresponding_range = np.array(range(starting_tid, starting_tid + self.env.num_states))
+        esvc_arr = [self.esvcind(i, corresponding_range) for i in corresponding_range]
 
-    def esvcind(self, ind):
-        esvc = np.matmul((self.env.transitions[:, :, ind] * self.fast_policy).T, self.esvc_mat[:, self.cur_loop_ctr])
+        cur_esvc = self.esvc_mat[:, self.cur_loop_ctr]
+        cur_esvc[corresponding_range + self.env.num_states] = esvc_arr  # + num_states to move 1 step of time
+        return cur_esvc
+
+    def esvcind(self, ind, relevant_range):
+        esvc = np.matmul((self.env.transitions[:, :, ind % self.env.num_states] *
+                          self.fast_policy[relevant_range, :]).T, self.esvc_mat[relevant_range, self.cur_loop_ctr])
         return np.sum(esvc)
 
     ###############################################

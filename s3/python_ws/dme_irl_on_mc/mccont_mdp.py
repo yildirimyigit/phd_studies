@@ -142,7 +142,7 @@ class MCContMDP:
 
             # redo if trapping state, bad implementation here
             while np.all(self.transitions[self.start_state_id, :, self.start_state_id] == 1):
-                print('++get_start_state')
+                print('++searching_nontrapping_start_state')
                 s = np.array([np.random.uniform(low=-0.6, high=-0.4), 0])
                 self.start_state_id = self.find_closest_state(s)
 
