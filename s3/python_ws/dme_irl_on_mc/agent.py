@@ -56,7 +56,7 @@ class IRLAgent:
         self.calculate_emp_fc()
 
         # Variables used in calculations
-        self.vi_loop = 66  # self.mean_trajectory_length
+        self.vi_loop = self.mean_trajectory_length
         self.normalized_states = np.empty_like(self.env.states)
         self.v = np.empty((len(self.env.states), self.vi_loop), dtype=float)
         self.q = np.empty((len(self.env.states), len(self.env.actions)), dtype=float)
@@ -118,7 +118,7 @@ class IRLAgent:
         goal_states = self.env.get_goal_state()
 
         self.esvc_mat[:] = 0
-        self.esvc_mat[start_states, :] = 1
+        self.esvc_mat[start_states, 0] = 1
         for loop_ctr in range(self.vi_loop-1):
             self.cur_loop_ctr = loop_ctr
             self.esvc_mat[goal_states, loop_ctr] = 0
