@@ -17,8 +17,8 @@ optim = torch.optim.SGD(model.parameters(), lr=0.1)
 t0 = time.time()
 for i in range(500):
     s = model(x)
-    l = loss(s, y)
-    l.backward()
+    loss = loss(s, y)
+    loss.backward()
     optim.step()
     optim.zero_grad()
 

@@ -11,7 +11,7 @@ from tqdm import tqdm
 class MCContMDP:
     def __init__(self):
         self.x_div = 60
-        self.y_div = 40
+        self.y_div = 30
         self.num_actions = 10
 
         self.data_path = "data/mccont/"
