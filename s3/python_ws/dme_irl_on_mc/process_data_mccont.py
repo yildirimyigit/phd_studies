@@ -20,7 +20,7 @@ def generate_trajectories(mdp, path='data/mccont/'):
             trajectory = []
             trajectory_of_ids = []
             for state_action in demonstration:
-                sid = mdp.find_closest_state(np.array([state_action[0][0], state_action[0][1]]))
+                sid = mdp.find_closest_states(np.array([state_action[0][0], state_action[0][1]]))[0]
                 aid = mdp.find_closest_action(np.array(state_action[1][0]))
                 s = mdp.states[sid]
                 a = mdp.actions[aid]
