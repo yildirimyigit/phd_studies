@@ -22,9 +22,10 @@ class IRLAgent:
     def __init__(self):
         self.env = MCContMDP()
         # initializes nn with random weights
-        self.rew_nn = MyNN(nn_arch=(2, 8, 16, 32, 64, 16, 64, 32, 64, 32, 64, 16, 64, 32, 16, 8, 1),
-                           acts=[sigm, sigm, sigm, sigm, sigm, sigm, sigm, gaussian, sigm, sigm, sigm,
-                                 sigm, sigm, sigm, sigm, linear])
+        # self.rew_nn = MyNN(nn_arch=(2, 8, 16, 32, 64, 16, 64, 32, 64, 32, 64, 16, 64, 32, 16, 8, 1),
+        #                    acts=[sigm, sigm, sigm, sigm, sigm, sigm, sigm, gaussian, sigm, sigm, sigm,
+        #                          sigm, sigm, sigm, sigm, linear])
+        self.rew_nn = MyNN(nn_arch=(2, 32, 256, 32, 1), acts=[sigm, sigm, sigm, linear])
         self.state_rewards = np.empty(len(self.env.states), dtype=float)
         self.initialize_rewards()
 
@@ -56,7 +57,7 @@ class IRLAgent:
         self.calculate_emp_fc()
 
         # Variables used in calculations
-        self.vi_loop = self.mean_trajectory_length
+        self.vi_loop = 120  # self.mean_trajectory_length
         self.normalized_states = np.empty_like(self.env.states)
         self.v = np.empty((len(self.env.states), self.vi_loop), dtype=float)
         self.q = np.empty((len(self.env.states), len(self.env.actions)), dtype=float)
@@ -80,9 +81,11 @@ class IRLAgent:
         goal_states = self.env.get_goal_state()
 
         for i in range(self.vi_loop-1):
+            prev_v = v
             v[goal_states] = 0
             for s in range(len(self.env.states)):
-                q[s, :] = np.matmul(self.env.transitions[s, :, :], v).T + self.state_rewards[s]
+                if s not in goal_states:
+                    q[s, :] = np.matmul(self.env.transitions[s, :, :], v).T + self.state_rewards[s]
 
             # v = softmax_a q
             # one problem: when np.sum(np.exp(q), axis=1) = 0, division by 0. In this case v = 0
@@ -96,6 +99,8 @@ class IRLAgent:
 
             if i % 20 == 19:
                 print('\rBackward Pass: {}'.format((i + 1)), end='')
+
+            print(np.max(np.abs(prev_v - v)))
 
         print('')
         # self.save_q(q, ind)
@@ -236,7 +241,7 @@ class IRLAgent:
             if ind != -1:
                 path = path+str(ind)
         data = np.reshape(inp, self.env.shape)
-        plt.figure(figsize=(20, 6))
+        plt.figure(figsize=(22, 8))
         hm = sb.heatmap(data.T, linewidths=0.025, linecolor='silver')
         hm.set_title(title)
         hm.set_xlabel(xlabel)
@@ -286,13 +291,13 @@ class IRLAgent:
         step_ctr = 0
 
         s = env.reset()
-        current_s = self.env.find_closest_state(s)
+        current_s = self.env.find_closest_states(s)[0]
         while not done and step_ctr < 3500:
             env.render()
             action_id = np.random.choice(range(len(self.env.actions)), 1, self.fast_policy[current_s, :].tolist())[0]
             # action_id = np.argmax(self.fast_policy[current_s, :])
             next_s, _, done, _ = env.step(np.array([self.env.actions[action_id]]))
-            current_s = self.env.find_closest_state(next_s)
+            current_s = self.env.find_closest_states(next_s)[0]
             step_ctr += 1
             # time.sleep(0.01)
             # print("State: ", current_s, " - Action: ", self.env.actions[action_id].force)
