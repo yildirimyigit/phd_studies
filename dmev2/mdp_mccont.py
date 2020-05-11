@@ -9,42 +9,40 @@ from tqdm import tqdm
 
 
 class MCContMDP:
-    def __init__(self):
-        self.x_div = 60
-        self.y_div = 40
+    def __init__(self, state_space=(120, 80)):
+        self.state_space = state_space
         self.num_actions = 10
 
         self.data_path = "data/mccont/"
-        self.model_path = self.data_path + "model/" + \
-            str(self.x_div) + "-" + str(self.y_div) + "-" + str(self.num_actions) + "/"
+        self.model_path = self.data_path + "model/" + "s:"
+        for i in self.state_space:
+            self.model_path += str(i) + "-"
+        self.model_path += "a:" + str(self.num_actions) + "/"
 
-        self.shape = (self.x_div, self.y_div)
-        self.num_states = self.x_div * self.y_div
+        self.num_states = int(np.prod(self.state_space))
 
-        self.is_generated_before = os.path.isfile(self.model_path + "actions.pt")
         self.states, self.actions, self.transitions = None, None, None
+        self.generate_environment(os.path.isfile(self.model_path + "actions.pt"))  # if exists, don't generate again
 
-        self.generate_environment()
-
-    def generate_environment(self):
-        if self.is_generated_before:
+    def generate_environment(self, generated_before):
+        if generated_before:
             self.states = self.load_tensor("states.pt")
             self.actions = self.load_tensor("actions.pt")
             self.transitions = self.load_tensor("transitions.pt")
         else:
             self.create_data()
-            self.is_generated_before = True
 
+    # this method is specific to my definition of the environment. May be improved to be more generic
     def create_data(self):
         try:
             os.makedirs(self.model_path)
-        except:
+        except OSError:
             pass
         env = gym.make('MountainCarContinuous-v0')
 
-        states = np.zeros((self.num_states, 2))
-        actions = np.zeros((self.num_actions, 1))
-        transitions = np.zeros((self.num_states, self.num_actions, self.num_states))
+        self.states = torch.zeros(self.num_states, len(self.state_space))
+        self.actions = torch.zeros(self.num_actions, 1)
+        self.transitions = torch.zeros((self.num_states, self.num_actions, self.num_states))
 
         min_act = env.unwrapped.min_action
         max_act = env.unwrapped.max_action
@@ -54,58 +52,49 @@ class MCContMDP:
         min_v = -max_v
 
         act_step = (max_act - min_act) / self.num_actions
-        x_step = (max_x - min_x) / self.x_div
-        v_step = (max_v - min_v) / self.y_div
+        x_step = (max_x - min_x) / self.state_space[0]
+        v_step = (max_v - min_v) / self.state_space[1]
 
-        # creating self.states
-        x_cur = min_x + x_step / 2
-        i = 0
-        while x_cur < max_x:
-            j = 0
-            v_cur = min_v + v_step / 2
-            while v_cur < max_v:
-                states[i * self.y_div + j] = [x_cur, v_cur]
-                v_cur += v_step
-                j += 1
-            x_cur += x_step
-            i += 1
+        x_vals = torch.linspace(min_x + x_step / 2, max_x - x_step / 2, self.state_space[0])
+        v_vals = torch.linspace(min_v + v_step / 2, max_v - v_step / 2, self.state_space[1])
 
-        self.states = torch.from_numpy(states)
+        for i, x in enumerate(x_vals):
+            for j, v in enumerate(v_vals):
+                self.states[i * self.state_space[1] + j] = torch.Tensor([x, v])
 
-        # creating self.actions
-        cur_act = min_act + act_step / 2
-        for i in range(self.num_actions):
-            actions[i] = [cur_act]
-            cur_act += act_step
-
-        self.actions = torch.from_numpy(actions)
+        self.actions = torch.linspace(min_act + act_step / 2, max_act - act_step / 2, self.num_actions)
+        self.actions = self.actions.view(self.num_actions, 1)
 
         env.reset()
-        for i in tqdm(range(len(states))):
-            s = states[i]
-            for j, a in enumerate(actions):
-                env.unwrapped.state = np.array(s)
-                next_s, _, _, _ = env.step(a)
-                k = self.find_closest_state(next_s)
-                transitions[i, j, k] = 1
+        np_states = self.states.numpy()
+        for i in tqdm(range(self.num_states)):
+            s = self.states[i]
+            for j, a in enumerate(self.actions):
+                env.unwrapped.state = s.numpy()
+                next_s, _, _, _ = env.step(a.numpy())
+                closest_states = self.find_closest_states(next_s, np_states)
+                prob_per_state = 1 / len(closest_states)
+                for k in closest_states:
+                    self.transitions[i, j, k] = prob_per_state
 
         env.close()
-        self.transitions = torch.from_numpy(transitions)
 
         self.save_tensor(self.states, "states.pt")
         self.save_tensor(self.actions, "actions.pt")
         self.save_tensor(self.transitions, "transitions.pt")
 
-    def find_closest_state(self, state):
-        min_ind = -1
+    def find_closest_states(self, state, np_states):
+        indices = []
         min_dist = np.inf
-        for i, s in enumerate(self.states):
-            dist = (s[0].item() - state[0]) ** 2 + (s[1].item() - state[1]) ** 2
+        for i, s in enumerate(np_states):
+            dist = (s[0] - state[0]) ** 2 + (s[1] - state[1]) ** 2
             if dist < min_dist:
                 min_dist = dist
-                min_ind = i
-
-        return min_ind
+                indices.clear()
+                indices.append(i)
+            elif dist == min_dist:
+                indices.append(i)
+        return indices
 
     def find_closest_action(self, action):
         min_ind = -1
@@ -119,9 +108,9 @@ class MCContMDP:
 
     def get_start_state(self):
         s = np.array([np.random.uniform(low=-0.6, high=-0.4), 0])
-        closest = self.find_closest_state(s)
+        # choose one uniformly among all closest candidates
+        closest = np.random.choice(self.find_closest_states(s, self.states.numpy()), 1)
 
-        # closest = 604
         return torch.tensor(closest)
 
     def get_goal_state(self):
