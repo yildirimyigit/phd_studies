@@ -67,8 +67,10 @@ class MCContMDP:
             for j, v in enumerate(v_vals):
                 self.states[i * self.v_div + j] = [x, v]
 
-        self.actions = np.reshape(np.linspace(min_act+act_step/2, max_act-act_step/2, self.num_actions),
-                                  (self.num_actions, 1))
+        # self.actions = np.reshape(np.linspace(min_act+act_step/2, max_act-act_step/2, self.num_actions),
+        #                           (self.num_actions, 1))
+        # Upon Ersin's suggestion, now A = {-1, 1}
+        self.actions = np.reshape(np.linspace(min_act, max_act, self.num_actions), (self.num_actions, 1))
 
         env.reset()
         for i, s in enumerate(self.states):
