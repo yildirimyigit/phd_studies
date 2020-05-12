@@ -15,7 +15,7 @@ class MCContMDP:
         self.shape = (self.x_div, self.v_div)
 
         self.num_states = self.x_div * self.v_div
-        self.num_actions = 5
+        self.num_actions = 2
 
         self.data_path = "data/mccont/"
         self.env_path = self.data_path + "env/s:" + \
