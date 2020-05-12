@@ -96,7 +96,8 @@ class MCContMDP:
         indices = []
         min_dist = np.inf
         for i, s in enumerate(self.states):
-            dist = (s[0]-state[0])**2 + (s[1]-state[1])**2
+            dist = np.round((s[0]-state[0])**2 + (s[1]-state[1])**2, 12)  # rounding to 12 decimals
+            # because of a float calc. error in Python.
             if dist < min_dist:
                 min_dist = dist
                 indices.clear()
