@@ -88,15 +88,14 @@ class IRLAgent:
                 if s not in goal_states:
                     q[s, :] = np.matmul(self.env.transitions[s, :, :], v).T + self.state_rewards[s]
 
-            # one problem: when np.sum(np.exp(q), axis=1) = 0, division by 0. In this case v = 0
-            # v = softmax_a q
-            # expq = np.exp(q)
-            # sumexpq = np.sum(expq, axis=1)
-            # nonzero_ids = np.where(sumexpq != 0)
-            # zero_ids = np.where(sumexpq == 0)
-            # v[nonzero_ids, 0] = np.exp(np.max(q[nonzero_ids], axis=1))/sumexpq[nonzero_ids]
-            # v[zero_ids, 0] = -sys.float_info.max
-            v = np.max(q, axis=1)
+                q_exp = np.exp(q[s, :])
+                sum_q_exp = np.sum(q_exp)
+                if sum_q_exp != 0:
+                    q[s, :] = q[s, :] * (q_exp/sum_q_exp)
+                else:  # if sum_q_exp is 0 then q_exp is 0 so each q is -inf. Meaning, v should be -inf
+                    q[s, :] = q[s, :] / self.env.num_actions + 0.01  # insane trick to get rid of -inf and have e-308
+                    # because when minimum number a = e-308 --> (a/3)*3 becomes -inf
+            v = np.sum(q, axis=1)
 
             if i % 20 == 19:
                 print('\rBackward Pass: {}'.format((i + 1)), end='')
