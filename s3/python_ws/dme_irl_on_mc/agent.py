@@ -6,27 +6,27 @@
 """
 import numpy as np
 from mccont_mdp import MCContMDP
-from neural_network import MyNN, sigm, linear, gaussian
+from neural_network import MyNN, sigm, linear
 
 import sys
 import seaborn as sb
-from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import os
 import time
 
 import gym
-from utils import *
 
 
 class IRLAgent:
     def __init__(self):
         self.env = MCContMDP()
         # initializes nn with random weights
-        self.rew_nn = MyNN(nn_arch=(3, 8, 16, 32, 64, 16, 64, 32, 64, 32, 64, 16, 64, 32, 16, 8, 1),
-                           acts=[sigm, sigm, sigm, sigm, sigm, sigm, sigm, gaussian, sigm, sigm, sigm,
-                                 sigm, sigm, sigm, sigm, linear])
-        self.state_rewards = np.empty(len(self.env.t_states), dtype=float)
+        # self.rew_nn = MyNN(nn_arch=(2, 8, 16, 32, 64, 16, 64, 32, 64, 32, 64, 16, 64, 32, 16, 8, 1),
+        #                    acts=[sigm, sigm, sigm, sigm, sigm, sigm, sigm, gaussian, sigm, sigm, sigm,
+        #                          sigm, sigm, sigm, sigm, linear])
+        self.rew_nn = MyNN(nn_arch=(2, 32, 256, 32, 1), acts=[sigm, sigm, sigm, linear])
+        self.state_rewards = np.empty(len(self.env.states), dtype=float)
+
         self.initialize_rewards()
 
         # To output the results, the following are used
@@ -53,18 +53,18 @@ class IRLAgent:
         self.cur_loop_ctr = 0
 
         self.mean_trajectory_length = 0
-        self.emp_fc = np.zeros(self.env.num_t_states)
+        self.emp_fc = np.zeros(self.env.num_states)
         self.calculate_emp_fc()
 
         # Variables used in calculations
-        self.vi_loop = self.env.t_div - 1  # self.mean_trajectory_length
-        self.normalized_states = np.empty_like(self.env.t_states)
-        self.v = np.empty((len(self.env.t_states), self.vi_loop), dtype=float)
-        self.q = np.empty((len(self.env.t_states), len(self.env.actions)), dtype=float)
-        self.advantage = np.empty((len(self.env.t_states), len(self.env.actions)), dtype=float)
-        self.fast_policy = np.empty((len(self.env.t_states), len(self.env.actions)), dtype=float)
-        self.esvc = np.empty(self.env.num_t_states, dtype=float)
-        self.esvc_mat = np.empty((self.env.num_t_states, self.vi_loop), dtype=float)
+        self.vi_loop = 120  # self.mean_trajectory_length
+        self.normalized_states = np.empty_like(self.env.states)
+        self.v = np.empty((len(self.env.states), self.vi_loop), dtype=float)
+        self.q = np.empty((len(self.env.states), len(self.env.actions)), dtype=float)
+        self.advantage = np.empty((len(self.env.states), len(self.env.actions)), dtype=float)
+        self.fast_policy = np.empty((len(self.env.states), len(self.env.actions)), dtype=float)
+        self.esvc = np.empty(len(self.env.states), dtype=float)
+        self.esvc_mat = np.empty((len(self.env.states), self.vi_loop), dtype=float)
 
         self.mc_normalized_states()
 
@@ -75,19 +75,18 @@ class IRLAgent:
     def fast_backward_pass(self):
         # print("+ IRLAgent.backward_pass")
 
-        v = np.ones((len(self.env.t_states), 1)) * -sys.float_info.max
-        q = np.zeros((len(self.env.t_states), len(self.env.actions)))
+        v = np.ones((len(self.env.states), 1)) * -sys.float_info.max
+        q = np.zeros((len(self.env.states), len(self.env.actions)))
 
         goal_states = self.env.get_goal_state()
 
         for i in range(self.vi_loop-1):
+            prev_v = v
             v[goal_states] = 0
-            for s in range(self.env.num_states):
-                for t in range(self.env.t_div):
-                    t_states_begin_ind = self.env.num_states * t
-                    ts_ind = t_states_begin_ind + s
-                    st_ind = range(t_states_begin_ind, t_states_begin_ind + self.env.num_states)
-                    q[ts_ind, :] = np.matmul(self.env.transitions[s, :, :], v[st_ind]).T + self.state_rewards[ts_ind]
+
+            for s in range(len(self.env.states)):
+                if s not in goal_states:
+                    q[s, :] = np.matmul(self.env.transitions[s, :, :], v).T + self.state_rewards[s]
 
             # one problem: when np.sum(np.exp(q), axis=1) = 0, division by 0. In this case v = 0
             # v = softmax_a q
@@ -102,11 +101,13 @@ class IRLAgent:
             if i % 20 == 19:
                 print('\rBackward Pass: {}'.format((i + 1)), end='')
 
+            print(np.max(np.abs(prev_v - v)))
+
         print('')
         # self.save_q(q, ind)
         v[goal_states] = 0
         # current MaxEnt policy:
-        self.advantage = q - np.reshape(v, (self.env.num_t_states, 1))
+        self.advantage = q - np.reshape(v, (self.env.num_states, 1))
         temp_policy = np.exp(self.advantage)
 
         self.fast_policy = np.array([temp_policy[i]/np.sum(temp_policy[i]) for i in range(len(temp_policy))])
@@ -124,6 +125,7 @@ class IRLAgent:
 
         self.esvc_mat[:] = 0
         self.esvc_mat[start_states, 0] = 1/len(np.atleast_1d(start_states))
+
         for loop_ctr in range(self.vi_loop-1):
             self.cur_loop_ctr = loop_ctr
             self.esvc_mat[goal_states, loop_ctr] = 0
@@ -202,8 +204,7 @@ class IRLAgent:
         self.mean_trajectory_length = int(np.ceil(np.average(trajectory_lengths)))
 
         # self.plot_emp_fc('empfc')
-        self.plot_in_t_state_space(self.emp_fc, path=self.output_directory_path+'empfc',
-                                   title='Empirical Feature Counts')
+        self.plot_in_state_space(self.emp_fc, path=self.output_directory_path+'empfc', title='Empirical Feature Counts')
 
     def policy(self, sid, aid):
         return np.exp(self.q[sid][aid] - self.v[sid, -1])   # last column in the v matrix
@@ -225,19 +226,17 @@ class IRLAgent:
         self.state_rewards = np.random.rand(len(self.state_rewards)) * 2 - 1
 
     def mc_normalized_states(self):
-        normalized_states = self.env.t_states.copy()
+        normalized_states = self.env.states.copy()
 
         min0 = np.min(normalized_states[:, 0])
         min1 = np.min(normalized_states[:, 1])
-        min2 = np.min(normalized_states[:, 2])
         max0 = np.max(normalized_states[:, 0])
         max1 = np.max(normalized_states[:, 1])
-        max2 = np.max(normalized_states[:, 2])
 
-        normalized_states -= [min0, min1, min2]
-        normalized_states /= [max0-min0, max1-min1, max2-min2]
+        normalized_states -= [min0, min1]
+        normalized_states /= [max0-min0, max1-min1]
 
-        self.normalized_states = normalized_states * 2 - 1  # scaling the states between [-1, 1]
+        self.normalized_states = normalized_states * 2 - 1  # scaling the states between [0, 1]
 
     def plot_reward(self, nof_iter):
         self.plot_in_state_space(self.state_rewards, ind=nof_iter, path=self.reward_path, title='State Rewards')
@@ -249,7 +248,7 @@ class IRLAgent:
             if ind != -1:
                 path = path+str(ind)
         data = np.reshape(inp, self.env.shape)
-        plt.figure(figsize=(20, 6))
+        plt.figure(figsize=(18, 18))
         hm = sb.heatmap(data.T, linewidths=0.025, linecolor='silver')
         hm.set_title(title)
         hm.set_xlabel(xlabel)
@@ -258,36 +257,36 @@ class IRLAgent:
         fig.savefig(path + '.png')
         fig.clf()
 
-    def plot_in_t_state_space(self, inp, ind=-1, path="", xlabel='x', ylabel='v', zlabel='t', title=''):
-        if path == "":
-            path = self.output_directory_path
-        else:
-            if ind != -1:
-                path = path+str(ind)
-        data = np.reshape(inp, self.env.t_shape)
-
-        z = []
-        x, y = [], []
-        for step in range(self.env.t_div):
-            if np.any(data[step] > 0):
-                xi, yi = np.where(data[step] != 0)
-                x.append(xi[0])
-                y.append(yi[0])
-                z.append(step)
-            else:
-                break
-
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-
-        ax.scatter(x, y, z, c='r', marker='o')
-
-        ax.set_title(title)
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(ylabel)
-        ax.set_zlabel(zlabel)
-        plt.savefig(path + '.png')
-        fig.clf()
+    # def plot_in_t_state_space(self, inp, ind=-1, path="", xlabel='x', ylabel='v', zlabel='t', title=''):
+    #     if path == "":
+    #         path = self.output_directory_path
+    #     else:
+    #         if ind != -1:
+    #             path = path+str(ind)
+    #     data = np.reshape(inp, self.env.t_shape)
+    #
+    #     z = []
+    #     x, y = [], []
+    #     for step in range(self.env.t_div):
+    #         if np.any(data[step] > 0):
+    #             xi, yi = np.where(data[step] != 0)
+    #             x.append(xi[0])
+    #             y.append(yi[0])
+    #             z.append(step)
+    #         else:
+    #             break
+    #
+    #     fig = plt.figure()
+    #     ax = fig.add_subplot(111, projection='3d')
+    #
+    #     ax.scatter(x, y, z, c='r', marker='o')
+    #
+    #     ax.set_title(title)
+    #     ax.set_xlabel(xlabel)
+    #     ax.set_ylabel(ylabel)
+    #     ax.set_zlabel(zlabel)
+    #     plt.savefig(path + '.png')
+    #     fig.clf()
 
     def save_reward(self, nof_iter):
         self.rewards_file.write(str(nof_iter) + "\n")
@@ -330,13 +329,13 @@ class IRLAgent:
         step_ctr = 0
 
         s = env.reset()
-        current_s = self.env.find_closest_state(s)
+        current_s = self.env.find_closest_states(s)[0]
         while not done and step_ctr < 3500:
             env.render()
             action_id = np.random.choice(range(len(self.env.actions)), 1, self.fast_policy[current_s, :].tolist())[0]
             # action_id = np.argmax(self.fast_policy[current_s, :])
             next_s, _, done, _ = env.step(np.array([self.env.actions[action_id]]))
-            current_s = self.env.find_closest_state(next_s)
+            current_s = self.env.find_closest_states(next_s)[0]
             step_ctr += 1
             # time.sleep(0.01)
             # print("State: ", current_s, " - Action: ", self.env.actions[action_id].force)
