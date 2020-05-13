@@ -5,6 +5,7 @@
 import os.path
 import numpy as np
 import gym
+from tqdm import tqdm
 
 
 class MCContMDP:
@@ -73,7 +74,7 @@ class MCContMDP:
         self.actions = np.reshape(np.linspace(min_act, max_act, self.num_actions), (self.num_actions, 1))
 
         env.reset()
-        for i, s in enumerate(self.states):
+        for i, s in enumerate(tqdm(self.states)):
             for j, a in enumerate(self.actions):
                 env.unwrapped.state = np.array(s)
                 next_s, _, _, _ = env.step(a)
@@ -120,7 +121,7 @@ class MCContMDP:
 
     def get_start_state(self):
         if self.start_state_id is None:
-            print('get_start_state+')
+            # print('get_start_state+')
             s = np.array([np.random.uniform(low=-0.6, high=-0.4), 0])
             self.start_state_id = np.random.choice(self.find_closest_states(s), 1)[0]
 
@@ -130,7 +131,7 @@ class MCContMDP:
                 s = np.array([np.random.uniform(low=-0.6, high=-0.4), 0])
                 self.start_state_id = self.find_closest_states(s)[0]
 
-        print('get_start_state-')
+        # print('get_start_state-')
         return np.array(self.start_state_id)
 
     def get_goal_state(self):

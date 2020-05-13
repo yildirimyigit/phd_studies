@@ -13,6 +13,7 @@ import seaborn as sb
 import matplotlib.pyplot as plt
 import os
 import time
+from tqdm import tqdm
 
 import gym
 
@@ -80,7 +81,7 @@ class IRLAgent:
 
         goal_states = self.env.get_goal_state()
 
-        for i in range(self.vi_loop-1):
+        for i in tqdm(range(self.vi_loop-1)):
             prev_v = v
             v[goal_states] = 0
 
@@ -97,10 +98,10 @@ class IRLAgent:
                     # because when minimum number a = e-308 --> (a/3)*3 becomes -inf
             v = np.sum(q, axis=1)
 
-            if i % 20 == 19:
-                print('\rBackward Pass: {}'.format((i + 1)), end='')
+            # if i % 20 == 19:
+            #     print('\rBackward Pass: {}'.format((i + 1)), end='')
 
-            print(np.max(np.abs(prev_v - v)))
+            # print(np.max(np.abs(prev_v - v)))
 
         print('')
         # self.save_q(q, ind)
@@ -125,34 +126,29 @@ class IRLAgent:
         self.esvc_mat[:] = 0
         self.esvc_mat[start_states, 0] = 1/len(np.atleast_1d(start_states))
 
-        for loop_ctr in range(self.vi_loop-1):
+        for loop_ctr in tqdm(range(self.vi_loop-1)):
             self.cur_loop_ctr = loop_ctr
             self.esvc_mat[goal_states, loop_ctr] = 0
             self.esvc_mat[:, loop_ctr + 1] = self.fast_calc_esvc_unnorm()
 
-            if loop_ctr % 10 == 9:
-                print('\rForward Pass: {}'.format((loop_ctr + 1)), end='')
+            # if loop_ctr % 10 == 9:
+            #     print('\rForward Pass: {}'.format((loop_ctr + 1)), end='')
 
         print('')
         self.esvc = np.sum(self.esvc_mat, axis=1)/self.vi_loop  # averaging over <self.vi_loop> many examples
-        # self.plot_esvc(path, 'esvc', self.esvc)
         # print("\n- IRLAgent.forward_pass")
 
     ###############################################
 
     def fast_calc_esvc_unnorm(self):
-        starting_tid = self.cur_loop_ctr*self.env.num_states
-        # exploiting temporal limits: t = self.cur_loop_ctr so only the range below is relevant
-        corresponding_range = np.array(range(starting_tid, starting_tid + self.env.num_states))
-        esvc_arr = [self.esvcind(i, corresponding_range) for i in corresponding_range]
+        t0 = time.time()
+        esvc_arr = [self.esvcind(i) for i in range(len(self.env.states))]
+        t1 = time.time()
+        print(f'Took {int(round((t1-t0) * 1000))} milliseconds')
+        return esvc_arr
 
-        cur_esvc = self.esvc_mat[:, self.cur_loop_ctr]
-        cur_esvc[corresponding_range + self.env.num_states] = esvc_arr  # + num_states to move 1 step of time
-        return cur_esvc
-
-    def esvcind(self, ind, relevant_range):
-        esvc = np.matmul((self.env.transitions[:, :, ind % self.env.num_states] *
-                          self.fast_policy[relevant_range, :]).T, self.esvc_mat[relevant_range, self.cur_loop_ctr])
+    def esvcind(self, ind):
+        esvc = np.matmul((self.env.transitions[:, :, ind] * self.fast_policy).T, self.esvc_mat[:, self.cur_loop_ctr])
         return np.sum(esvc)
 
     ###############################################
@@ -176,6 +172,7 @@ class IRLAgent:
     def calculate_emp_fc(self):
         trajectories = np.load(self.env.env_path + 'trajectories_of_ids.npy', encoding='bytes', allow_pickle=True)
         found = False
+        len_traj = 0
         trajectory_lengths = []
 
         while not found:
@@ -187,13 +184,13 @@ class IRLAgent:
                         found = True
 
                         for step, state_action in enumerate(trajectory):  # state_action: [state, action]
-                            self.emp_fc[step * self.env.num_states + state_action[0]] += 1
-                        len_traj = step + 1
+                            self.emp_fc[state_action[0]] += 1
+                            len_traj = step + 1
                         trajectory_lengths.append(len_traj)
                         break
 
             if not found:
-                print("No trajectory with start state: {0}", self.env.start_state_id)
+                print(f"No trajectory with start state: {self.env.start_state_id}")
                 # reassigning start state to match a trajectory
                 self.env.start_state_id = None
                 self.env.get_start_state()
@@ -247,7 +244,7 @@ class IRLAgent:
             if ind != -1:
                 path = path+str(ind)
         data = np.reshape(inp, self.env.shape)
-        plt.figure(figsize=(18, 18))
+        plt.figure(figsize=(20, 14))
         hm = sb.heatmap(data.T, linewidths=0.025, linecolor='silver')
         hm.set_title(title)
         hm.set_xlabel(xlabel)
