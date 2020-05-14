@@ -38,9 +38,9 @@ class DME:
 
             # solve mdp wrt current reward
             t0 = time.time()
-            self.irl_agent.fast_backward_pass()
+            self.irl_agent.new_backward_pass()
             t1 = time.time()
-            self.irl_agent.fast_forward_pass()   # calculate irl.esvc to use it in calculation of irl.exp_fc
+            self.irl_agent.new_forward_pass()   # calculate irl.esvc to use it in calculation of irl.exp_fc
             t2 = time.time()
             print('Duration-- back: {0}, forward: {1}'.format(t1-t0, t2-t1))
 

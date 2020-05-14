@@ -152,6 +152,73 @@ class IRLAgent:
         return np.sum(esvc)
 
     ###############################################
+    ###############################################
+    ###############################################
+    ###############################################
+
+    def new_backward_pass(self):
+        print("IRLAgent.backward_pass")
+        v = np.ones((len(self.env.states), 1)) * -sys.float_info.max
+        q = np.zeros((len(self.env.states), len(self.env.actions)))
+
+        goal_states = self.env.get_goal_state()
+
+        for i in tqdm(range(self.vi_loop - 1)):
+            # prev_v = v
+            v[goal_states] = 0
+
+            for s in range(self.env.num_states):
+                if s not in goal_states:
+                    for a in range(self.env.num_actions):
+                        sum_q = 0
+                        for destination in self.env.forward_transitions[s, a]:
+                            sum_q = self.env.transitions[s, a, destination] * v[destination]
+                        q[s, a] = sum_q
+                    q[s, :] += self.state_rewards[s]
+
+                q_exp = np.exp(q[s, :])
+                sum_q_exp = np.sum(q_exp)
+                if sum_q_exp != 0:
+                    q[s, :] = q[s, :] * (q_exp / sum_q_exp)
+                else:  # if sum_q_exp is 0 then q_exp is 0 so each q is -inf. Meaning, v should be -inf
+                    q[s, :] = q[s, :] / self.env.num_actions + 0.01  # insane trick to get rid of -inf and have e-308
+                    # because when minimum number a = e-308 --> (a/3)*3 becomes -inf
+            v = np.sum(q, axis=1)
+        print('')
+        # self.save_q(q, ind)
+        v[goal_states] = 0
+        # current MaxEnt policy:
+        self.advantage = q - np.reshape(v, (self.env.num_states, 1))
+        temp_policy = np.exp(self.advantage)
+
+        self.fast_policy = np.array([temp_policy[i] / np.sum(temp_policy[i]) for i in range(len(temp_policy))])
+        self.fast_policy[goal_states] = 1
+
+    def new_forward_pass(self):  # esvc: expected state visitation count
+        print("IRLAgent.forward_pass")
+        start_states = self.env.get_start_state()
+        goal_states = self.env.get_goal_state()
+
+        self.esvc_mat[:] = 0
+        self.esvc_mat[start_states, 0] = 1 / len(np.atleast_1d(start_states))
+
+        for loop_ctr in tqdm(range(self.vi_loop - 1)):
+            self.cur_loop_ctr = loop_ctr
+            self.esvc_mat[goal_states, loop_ctr] = 0
+            for s in range(self.env.num_states):
+                start_action = self.env.backward_transitions[s]
+                sum_esvc = 0
+                for start, action in start_action:  # for each (start, action) pair that leads to state s
+                    sum_esvc += self.env.transitions[start, action, s] * self.fast_policy[start, action] * \
+                                self.esvc_mat[start, loop_ctr]
+                self.esvc_mat[s, loop_ctr+1] = sum_esvc
+
+        self.esvc = np.sum(self.esvc_mat, axis=1)
+
+    ###############################################
+    ###############################################
+    ###############################################
+    ###############################################
 
     def calculate_emp_fc_(self):
         cumulative_emp_fc = np.zeros_like(self.emp_fc)
