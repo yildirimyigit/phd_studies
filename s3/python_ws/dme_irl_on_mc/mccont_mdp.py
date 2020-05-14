@@ -23,7 +23,9 @@ class MCContMDP:
             str(self.x_div) + "-" + str(self.v_div) + "-a:" + str(self.num_actions) + "/"
 
         self.is_generated = os.path.isfile(self.env_path + "actions.npy")
+        self.is_forward_transition_generated = os.path.isfile(self.env_path + "forward_transitions.npy")
         self.states, self.actions, self.transitions = None, None, None
+        self.forward_transitions, self.backward_transitions = [], []
 
         self.generate_environment()
 
@@ -38,6 +40,13 @@ class MCContMDP:
         else:
             self.create_data()
             self.is_generated = True
+        # ======================
+        if self.is_forward_transition_generated:
+            self.forward_transitions = self.load_np_file(self.env_path + "forward_transitions.npy")
+            self.backward_transitions = self.load_np_file(self.env_path + "backward_transitions.npy")
+        else:
+            self.create_forward_backward_transitions()
+            self.is_forward_transition_generated = True
 
     def create_data(self):
         try:
@@ -88,6 +97,25 @@ class MCContMDP:
         self.save_np_file(self.env_path + "states.npy", self.states)
         self.save_np_file(self.env_path + "actions.npy", self.actions)
         self.save_np_file(self.env_path + "transitions.npy", self.transitions)
+
+    def create_forward_backward_transitions(self):
+        # Upon Ersin's 3rd suggestion in issue #39, changing transition representation.
+        # F and B transitions will be lookup tables, such as f[x]=[[49, 50], [50]]. (a=0 leads to (49 and 50) and so on)
+        # For each state, we keep <num_actions> lists. Each list keeps possible destinations
+        print('Preparing forward and backward transitions:')
+        for s in tqdm(range(self.num_states)):
+            f = []
+            b = []
+            for a in range(self.num_actions):
+                f.append(self.transitions[s, a].nonzero()[0])
+                start_states = self.transitions[:, a, s].nonzero()[0]  # for backward
+                for start_state in start_states:
+                    b.append((start_state, a))
+            self.forward_transitions.append(f)
+            self.backward_transitions.append(b)
+
+        self.save_np_file(self.env_path + "forward_transitions.npy", np.array(self.forward_transitions))
+        self.save_np_file(self.env_path + "backward_transitions.npy", np.array(self.backward_transitions))
 
     def save_np_file(self, filepath, m_array):
         np.save(filepath, m_array)
