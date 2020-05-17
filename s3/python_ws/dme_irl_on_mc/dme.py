@@ -32,8 +32,8 @@ class DME:
 
             self.irl_agent.reward_batch()
 
-            # self.irl_agent.save_reward(i)
-            # self.irl_agent.plot_reward(i)
+            self.irl_agent.save_reward(i)
+            self.irl_agent.plot_reward(i)
             # self.plot_reward2(i)
 
             # solve mdp wrt current reward
@@ -42,12 +42,10 @@ class DME:
             t1 = time.time()
             self.irl_agent.new_forward_pass()   # calculate irl.esvc to use it in calculation of irl.exp_fc
             t2 = time.time()
-            print('Duration-- back: {0}, forward: {1}'.format(t1-t0, t2-t1))
+            print(f'Duration-- back: {t1-t0}, forward: {t2-t1}')
 
             # self.save_policy(i)
 
-            # calculate loss and euler distance to [0,0, ..., 0] which we want loss to be
-            # loss = self.irl_agent.emp_fc - self.irl_agent.exp_fc()  # FAULTY exp_fc calculation
             diff = self.irl_agent.emp_fc - self.irl_agent.esvc
             print("Diff sum: ", repr(np.sum(np.abs(diff))))
 

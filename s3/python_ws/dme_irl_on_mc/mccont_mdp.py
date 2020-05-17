@@ -10,13 +10,13 @@ from tqdm import tqdm
 
 class MCContMDP:
     def __init__(self):
-        self.x_div = 100
-        self.v_div = 100
+        self.x_div = 60
+        self.v_div = 40
 
         self.shape = (self.x_div, self.v_div)
 
         self.num_states = self.x_div * self.v_div
-        self.num_actions = 2
+        self.num_actions = 3
 
         self.data_path = "data/mccont/"
         self.env_path = self.data_path + "env/s:" + \
@@ -151,13 +151,17 @@ class MCContMDP:
         if self.start_state_id is None:
             # print('get_start_state+')
             s = np.array([np.random.uniform(low=-0.6, high=-0.4), 0])
-            self.start_state_id = np.random.choice(self.find_closest_states(s), 1)[0]
+            start_candidates = self.find_closest_states(s)
 
-            # redo if trapping state, bad implementation here
-            while np.all(self.transitions[self.start_state_id, :, self.start_state_id] == 1):
-                print('++searching_nontrapping_start_state')
-                s = np.array([np.random.uniform(low=-0.6, high=-0.4), 0])
-                self.start_state_id = self.find_closest_states(s)[0]
+            found_start = False
+            for start_candidate in start_candidates:
+                if np.any(self.transitions[start_candidate, :, start_candidate] < 1):
+                    self.start_state_id = start_candidate
+                    found_start = True
+                    break
+
+            if not found_start:  # start candidates are trapping
+                return self.get_start_state()
 
         # print('get_start_state-')
         return np.array(self.start_state_id)
