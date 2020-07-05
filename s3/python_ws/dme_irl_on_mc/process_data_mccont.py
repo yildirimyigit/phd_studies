@@ -12,7 +12,7 @@ def generate_trajectories(mdp, path='data/mccont/'):
     trajectories = []
     trajectories_of_ids = []
     for i in range(3):
-        demonstrations = np.load(path+'t_'+str(i)+'.npy')
+        demonstrations = mdp.load_np_file(path + 't_' + str(i) + '.npy')
         j = 0
         for demonstration in demonstrations:
             print('\rTrajectory file: {0}, Demonstration: {1} '.format(i, j), end='')
@@ -20,7 +20,7 @@ def generate_trajectories(mdp, path='data/mccont/'):
             trajectory = []
             trajectory_of_ids = []
             for state_action in demonstration:
-                sid = mdp.find_closest_state(np.array([state_action[0][0], state_action[0][1]]))
+                sid = mdp.find_closest_states(np.array([state_action[0][0], state_action[0][1]]))[0]
                 aid = mdp.find_closest_action(np.array(state_action[1][0]))
                 s = mdp.states[sid]
                 a = mdp.actions[aid]

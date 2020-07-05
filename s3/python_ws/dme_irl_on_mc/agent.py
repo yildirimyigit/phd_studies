@@ -13,9 +13,9 @@ import seaborn as sb
 import matplotlib.pyplot as plt
 import os
 import time
+from tqdm import tqdm
 
 import gym
-from utils import *
 
 
 class IRLAgent:
@@ -25,7 +25,7 @@ class IRLAgent:
         self.rew_nn = MyNN(nn_arch=(2, 8, 16, 32, 64, 16, 64, 32, 64, 32, 64, 16, 64, 32, 16, 8, 1),
                            acts=[sigm, sigm, sigm, sigm, sigm, sigm, sigm, gaussian, sigm, sigm, sigm,
                                  sigm, sigm, sigm, sigm, linear])
-        self.state_rewards = np.empty(len(self.env.states), dtype=float)
+        self.state_rewards = np.empty(self.env.num_states, dtype=float)
         self.initialize_rewards()
 
         # To output the results, the following are used
@@ -37,10 +37,12 @@ class IRLAgent:
         self.reward_path = self.output_directory_path + 'reward/'
         self.rewards_np_path = self.reward_path + 'rewards.npy'
         self.esvc_path = self.output_directory_path + 'esvc/'
+        self.v_path = self.output_directory_path + 'v/'
         os.makedirs(self.output_directory_path)
         os.makedirs(self.videodir)
         os.makedirs(self.reward_path)
         os.makedirs(self.esvc_path)
+        os.makedirs(self.v_path)
         self.rewards_file = open(self.reward_path + 'rewards.txt', "a+")
         # self.esvc_file = open(self.esvc_path + 'esvc.txt', "a+")
         # self.policy_file = open(self.irl_agent.output_directory_path + 'policy.txt', "a+")
@@ -52,18 +54,18 @@ class IRLAgent:
         self.cur_loop_ctr = 0
 
         self.mean_trajectory_length = 0
-        self.emp_fc = np.zeros(len(self.env.states))
-        self.calculate_emp_fc()
+        self.emp_fc = np.zeros(self.env.num_states)
+        self.calculate_emp_fc_all()
 
         # Variables used in calculations
-        self.vi_loop = self.mean_trajectory_length
+        self.vi_loop = 120
         self.normalized_states = np.empty_like(self.env.states)
-        self.v = np.empty((len(self.env.states), self.vi_loop), dtype=float)
-        self.q = np.empty((len(self.env.states), len(self.env.actions)), dtype=float)
-        self.advantage = np.empty((len(self.env.states), len(self.env.actions)), dtype=float)
-        self.fast_policy = np.empty((len(self.env.states), len(self.env.actions)), dtype=float)
-        self.esvc = np.empty(len(self.env.states), dtype=float)
-        self.esvc_mat = np.empty((len(self.env.states), self.vi_loop), dtype=float)
+        self.v = np.empty((self.env.num_states, self.vi_loop), dtype=float)
+        self.q = np.empty((self.env.num_states, self.env.num_actions), dtype=float)
+        self.advantage = np.empty((self.env.num_states, self.env.num_actions), dtype=float)
+        self.fast_policy = np.empty((self.env.num_states, self.env.num_actions), dtype=float)
+        self.esvc = np.empty(self.env.num_states, dtype=float)
+        self.esvc_mat = np.empty((self.env.num_states, self.vi_loop), dtype=float)
 
         self.mc_normalized_states()
 
@@ -74,34 +76,36 @@ class IRLAgent:
     def fast_backward_pass(self):
         # print("+ IRLAgent.backward_pass")
 
-        v = np.ones((len(self.env.states), 1)) * -sys.float_info.max
-        q = np.zeros((len(self.env.states), len(self.env.actions)))
+        v = np.ones((self.env.num_states, 1)) * -sys.float_info.max
+        q = np.zeros((self.env.num_states, self.env.num_actions))
 
         goal_states = self.env.get_goal_state()
 
-        for i in range(self.vi_loop-1):
+        for i in tqdm(range(self.vi_loop-1)):
+            prev_v = v
             v[goal_states] = 0
-            for s in range(len(self.env.states)):
-                q[s, :] = np.matmul(self.env.transitions[s, :, :], v).T + self.state_rewards[s]
+            for s in range(self.env.num_states):
+                if s not in goal_states:
+                    q[s, :] = np.matmul(self.env.transitions[s, :, :], v).T + self.state_rewards[s]
 
-            # v = softmax_a q
-            # one problem: when np.sum(np.exp(q), axis=1) = 0, division by 0. In this case v = 0
-            # expq = np.exp(q)
-            # sumexpq = np.sum(expq, axis=1)
-            # nonzero_ids = np.where(sumexpq != 0)
-            # zero_ids = np.where(sumexpq == 0)
-            # v[nonzero_ids, 0] = np.exp(np.max(q[nonzero_ids], axis=1))/sumexpq[nonzero_ids]
-            # v[zero_ids, 0] = -sys.float_info.max
-            v = np.max(q, axis=1)
+                q_exp = np.exp(q[s, :])
+                sum_q_exp = np.sum(q_exp)
+                if sum_q_exp != 0:
+                    q[s, :] = q[s, :] * (q_exp / sum_q_exp)
+                else:  # if sum_q_exp is 0 then q_exp is 0 so each q is -inf. Meaning, v should be -inf
+                    q[s, :] = q[s, :] / self.env.num_actions + 0.01  # insane trick to get rid of -inf and have e-308
+                    # because when minimum number a = e-308 --> (a/3)*3 becomes -inf
+            v = np.sum(q, axis=1)
 
-            if i % 20 == 19:
-                print('\rBackward Pass: {}'.format((i + 1)), end='')
+            # if i % 20 == 19:
+            #     print('\rBackward Pass: {}'.format((i + 1)), end='')
+            # print(np.max(np.abs(prev_v - v)))
 
         print('')
         # self.save_q(q, ind)
         v[goal_states] = 0
         # current MaxEnt policy:
-        self.advantage = q - np.reshape(v, (len(self.env.states), 1))
+        self.advantage = q - np.reshape(v, (self.env.num_states, 1))
         temp_policy = np.exp(self.advantage)
 
         self.fast_policy = np.array([temp_policy[i]/np.sum(temp_policy[i]) for i in range(len(temp_policy))])
@@ -118,14 +122,14 @@ class IRLAgent:
         goal_states = self.env.get_goal_state()
 
         self.esvc_mat[:] = 0
-        self.esvc_mat[start_states, :] = 1
-        for loop_ctr in range(self.vi_loop-1):
+        self.esvc_mat[start_states, 0] = 1 / len(np.atleast_1d(start_states))
+        for loop_ctr in tqdm(range(self.vi_loop - 1)):
             self.cur_loop_ctr = loop_ctr
             self.esvc_mat[goal_states, loop_ctr] = 0
             self.esvc_mat[:, loop_ctr + 1] = self.fast_calc_esvc_unnorm()
 
-            if loop_ctr % 10 == 9:
-                print('\rForward Pass: {}'.format((loop_ctr + 1)), end='')
+            # if loop_ctr % 10 == 9:
+            #     print('\rForward Pass: {}'.format((loop_ctr + 1)), end='')
 
         print('')
         self.esvc = np.sum(self.esvc_mat, axis=1)/self.vi_loop  # averaging over <self.vi_loop> many examples
@@ -142,6 +146,81 @@ class IRLAgent:
         esvc = np.matmul((self.env.transitions[:, :, ind] * self.fast_policy).T, self.esvc_mat[:, self.cur_loop_ctr])
         return np.sum(esvc)
 
+    ###############################################
+    ###############################################
+    ###############################################
+    ###############################################
+
+    def new_backward_pass(self):
+        # print("IRLAgent.backward_pass")
+        v = np.ones((len(self.env.states), 1)) * -sys.float_info.max
+        q = np.zeros((len(self.env.states), len(self.env.actions)))
+
+        goal_states = self.env.get_goal_state()
+
+        for i in tqdm(range(self.vi_loop)):
+            prev_v = v
+            v[goal_states] = 0
+
+            for s in range(self.env.num_states):
+                if s not in goal_states:
+                    for a in range(self.env.num_actions):
+                        sum_q = 0
+                        for destination in self.env.forward_transitions[s, a]:
+                            sum_q = self.env.transitions[s, a, destination] * v[destination]
+                        q[s, a] = sum_q
+                    q[s, :] += self.state_rewards[s]
+
+                q_exp = np.exp(q[s, :])
+                sum_q_exp = np.sum(q_exp)
+                if sum_q_exp != 0:
+                    q[s, :] = q[s, :] * (q_exp / sum_q_exp)
+                else:  # if sum_q_exp is 0 then q_exp is 0 so each q is -inf. Meaning, v should be -inf
+                    q[s, :] = np.ones_like(q[s]) * -sys.float_info.max / (self.env.num_actions + 0.1)
+                    # 0.1 is my insane trick to get rid of -inf and have e-308
+                    # because when minimum number a = e-308 --> (a/3)*3 becomes -inf
+            v = np.sum(q, axis=1)
+            # vv = v.copy()
+            # vv[vv < -10] = -10
+            # self.plot_in_state_space(vv, path=self.output_directory_path + 'v_' + str(i), title='State Values')
+        # print('')
+        # self.save_q(q, ind)
+        v[goal_states] = 0
+        # current MaxEnt policy:
+        self.advantage = q - np.reshape(v, (self.env.num_states, 1))
+        self.advantage[np.where(self.advantage > 1e305)] = 0  # no info for trapping states
+        temp_policy = np.exp(self.advantage)
+
+        self.fast_policy = np.array([temp_policy[i] / np.sum(temp_policy[i]) for i in range(self.env.num_states)])
+        self.fast_policy[goal_states] = 1 / self.env.num_actions
+
+    def new_forward_pass(self):  # esvc: expected state visitation count
+        # print("IRLAgent.forward_pass")
+        start_states = self.env.get_start_state()
+        goal_states = self.env.get_goal_state()
+
+        self.esvc_mat[:] = 0
+        self.esvc_mat[start_states, 0] = 1 / len(np.atleast_1d(start_states))
+
+        for loop_ctr in tqdm(range(self.vi_loop - 1)):
+        # for loop_ctr in tqdm(range(self.vi_loop)):
+            self.cur_loop_ctr = loop_ctr
+            self.esvc_mat[goal_states, loop_ctr] = 0
+            for s in range(self.env.num_states):
+                start_action = self.env.backward_transitions[s]
+                sum_esvc = 0
+                for start, action in start_action:  # for each (start, action) pair that leads to state s
+                    sum_esvc += self.env.transitions[start, action, s] * self.fast_policy[start, action] * \
+                                self.esvc_mat[start, loop_ctr]
+                self.esvc_mat[s, loop_ctr + 1] = sum_esvc
+            # self.plot_in_state_space(self.esvc_mat[:, loop_ctr],
+            #                          path=self.output_directory_path + 'esvc_mat' + str(loop_ctr), title='ESVC Mat')
+
+        self.esvc = np.sum(self.esvc_mat, axis=1) / self.vi_loop
+
+    ###############################################
+    ###############################################
+    ###############################################
     ###############################################
 
     def calculate_emp_fc_(self):
@@ -160,7 +239,7 @@ class IRLAgent:
         self.plot_in_state_space(self.emp_fc, path=self.output_directory_path+'empfc',
                                  title='Empirical Feature Counts')
 
-    def calculate_emp_fc(self):
+    def calculate_emp_fc_one(self):
         trajectories = np.load(self.env.env_path + 'trajectories_of_ids.npy', encoding='bytes', allow_pickle=True)
         found = False
         len_traj = 0
@@ -174,14 +253,14 @@ class IRLAgent:
                     else:
                         found = True
 
-                        for state_action in trajectory:  # state_action: [state, action]
+                        for step, state_action in enumerate(trajectory):  # state_action: [state, action]
                             self.emp_fc[state_action[0]] += 1
-                            len_traj += 1
+                        len_traj = step + 1
                         trajectory_lengths.append(len_traj)
                         break
 
             if not found:
-                print("No trajectory with start state: {0}", self.env.start_state_id)
+                print(f"No trajectory with start state: {self.env.start_state_id}")
                 # reassigning start state to match a trajectory
                 self.env.start_state_id = None
                 self.env.get_start_state()
@@ -192,6 +271,20 @@ class IRLAgent:
 
         # self.plot_emp_fc('empfc')
         self.plot_in_state_space(self.emp_fc, path=self.output_directory_path+'empfc',
+                                 title='Empirical Feature Counts')
+
+    def calculate_emp_fc_all(self):
+        trajectories = np.load(self.env.env_path + 'trajectories_of_ids.npy', encoding='bytes', allow_pickle=True)
+        trajectory_lengths = []
+
+        for trajectory in trajectories:
+            for step, state_action in enumerate(trajectory):  # state_action: [state, action]
+                self.emp_fc[state_action[0]] += step
+            trajectory_lengths.append(len(trajectory))
+
+        self.emp_fc /= len(trajectories)  # frequency calculation.
+        self.mean_trajectory_length = int(np.ceil(np.average(trajectory_lengths)))
+        self.plot_in_state_space(self.emp_fc, path=self.output_directory_path + 'empfc',
                                  title='Empirical Feature Counts')
 
     def policy(self, sid, aid):
@@ -236,7 +329,7 @@ class IRLAgent:
             if ind != -1:
                 path = path+str(ind)
         data = np.reshape(inp, self.env.shape)
-        plt.figure(figsize=(20, 6))
+        plt.figure(figsize=(20, 10))
         hm = sb.heatmap(data.T, linewidths=0.025, linecolor='silver')
         hm.set_title(title)
         hm.set_xlabel(xlabel)
@@ -244,6 +337,7 @@ class IRLAgent:
         fig = hm.get_figure()
         fig.savefig(path + '.png')
         fig.clf()
+        plt.close(fig)
 
     def save_reward(self, nof_iter):
         self.rewards_file.write(str(nof_iter) + "\n")
@@ -286,13 +380,13 @@ class IRLAgent:
         step_ctr = 0
 
         s = env.reset()
-        current_s = self.env.find_closest_state(s)
+        current_s = self.env.find_closest_states(s)[0]
         while not done and step_ctr < 3500:
             env.render()
             action_id = np.random.choice(range(len(self.env.actions)), 1, self.fast_policy[current_s, :].tolist())[0]
             # action_id = np.argmax(self.fast_policy[current_s, :])
             next_s, _, done, _ = env.step(np.array([self.env.actions[action_id]]))
-            current_s = self.env.find_closest_state(next_s)
+            current_s = self.env.find_closest_states(next_s)[0]
             step_ctr += 1
             # time.sleep(0.01)
             # print("State: ", current_s, " - Action: ", self.env.actions[action_id].force)
